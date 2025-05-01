@@ -1,0 +1,17 @@
+pandas
+requests
+gdal < 3.10.0
+requests-cache
+netcdf4
+pillow
+matplotlib
+rasterio
+basemap
+geopandas
+pyproj
+cartopy
+scipy
+osmnx
+xarray
+
+PyQt6
