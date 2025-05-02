@@ -1,4 +1,4 @@
-import typing
+import typing, os
 
 from custom_types import Extent, Resolution
 import numpy as np
@@ -126,3 +126,6 @@ def tile_to_mercator(x_tile: int, y_tile: int, zoom: int):
     lat = atan(sinh(pi * (1 - 2 * y_tile / n))) * 180 / pi
 
     return lon, lat
+
+def get_file_path(filename):
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)
