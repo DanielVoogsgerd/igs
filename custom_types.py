@@ -1,6 +1,6 @@
 import typing
 
-Extent = typing.Tuple[int, int, int, int]
-Bounds = typing.Tuple[int, int, int, int]
-Resolution = typing.Tuple[int, int]
-Coordinate = typing.Tuple[float, float]
+type Extent = typing.Tuple[float, float, float, float]
+type Bounds = typing.Tuple[float, float, float, float]
+type Resolution = typing.Tuple[int, int]
+type Coordinate = typing.Tuple[float, float]

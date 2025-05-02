@@ -186,7 +186,7 @@ def plot_map_cartopy(lat, lon):
     # ax.add_feature(cfeature.LAKES, alpha=0.5)
     # ax.add_feature(cfeature.RIVERS)
 
-    gdf = gpd.read_file("cadastre/gadm41_IDN_2.shp")
+    gdf = gpd.read_file("~/downloads/gadm41_IDN_2.shp")
     bandung = gdf[(gdf["NAME_2"] == "Bandung") & (gdf["TYPE_2"] == "Kabupaten")]
 
     # ax.add_geometries(bandung.geometry, crs=gdf.crs)

@@ -1,4 +1,4 @@
-#!/usr/env/python
+#!/usr/bin/env python
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from io import BytesIO
