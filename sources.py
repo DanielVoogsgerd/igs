@@ -390,7 +390,7 @@ class CHIRPSSource(Source):
     def _get_data(self):
         req = Request(
             "GET",
-            f"https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_daily/tifs/p05/{self.date.year}/chirps-v2.0.{self.date.strftime("%Y.%m.%d")}.tif.gz",
+            f"https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_daily/tifs/p05/{self.date.year}/chirps-v2.0.{self.date.strftime('%Y.%m.%d')}.tif.gz",
         ).prepare()
 
         print(req.url)
