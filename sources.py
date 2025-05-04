@@ -1,9 +1,8 @@
 #!/usr/env/python
 from abc import ABC, abstractmethod
-from datetime import timedelta
+from datetime import timedelta, date
 from io import BytesIO
 
-import datetime
 import gzip
 import rasterio
 import cartopy.crs as ccrs
@@ -108,6 +107,7 @@ class BnpbSource(Source):
             print(res.text)
 
         i = Image.open(BytesIO(res.content))
+
         return i
 
     def image_for_domain(self, target_domain, zoom):
@@ -158,7 +158,8 @@ class BnpbSource(Source):
         src_img = self._get_data(src_extent, (src_resolution_lat, src_resolution_lon))
         print("Image dimensions:", np.array(src_img).shape)
         # Combine RGB channels as it's a greyscale image
-        src_data = np.sum(src_img, axis=2, dtype=np.float32)
+        # src_data = np.sum(src_img, axis=2, dtype=np.float32)
+        src_data = np.array(src_img, dtype=np.float32)[:, :, 0] / 255
 
         output = reproject_gdal(
             src_data,
@@ -383,7 +384,7 @@ class CHIRPSSource(Source):
     DATA_EXTENT = (-180, 180, -50, 50)
     EPSG = 4326
 
-    def __init__(self, date: datetime.date):
+    def __init__(self, date: date):
         self.crs = ccrs.GOOGLE_MERCATOR
         self.date = date
 
@@ -393,12 +394,15 @@ class CHIRPSSource(Source):
             f"https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_daily/tifs/p05/{self.date.year}/chirps-v2.0.{self.date.strftime('%Y.%m.%d')}.tif.gz",
         ).prepare()
 
-        print(req.url)
-
         res = SESSION.send(req)
         if res.status_code != 200:
             print("CHIRPS request failed!")
             print(res.text)
+
+        if res.from_cache:
+            print(f"Cache hit for {req.url}")
+        else:
+            print(f"Cache miss for {req.url}")
 
         decompressed = gzip.open(BytesIO(res.content))
 

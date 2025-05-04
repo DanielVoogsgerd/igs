@@ -1,5 +1,5 @@
 #!/usr/env/python
-from datetime import timedelta, datetime
+from datetime import timedelta
 import os
 
 import cartopy.feature as cfeature
@@ -80,24 +80,26 @@ def main():
     )
 
     # NOTE: -- PRECIPITATION (historic)
-    hist_precipitation_factory = CHIRPSSource(date=datetime.datetime(2024, 1, 1))
-    data = hist_precipitation_factory.data_for_domain(extent, resolution)
-    ax.imshow(
-        data,
-        extent=extent,
-        cmap="Greens",
-        alpha=0.4,
-    )
-
-    # NOTE: -- FLOOD RISK
-    flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIR")
-    # data = flood_image_factory.data_for_domain(extent, resolution)
+    # hist_precipitation_factory = CHIRPSSource(date=datetime(2024, 1, 1))
+    # data = hist_precipitation_factory.data_for_domain(extent, resolution)
     # ax.imshow(
     #     data,
     #     extent=extent,
-    #     cmap="Reds",
+    #     cmap="Greens",
     #     alpha=0.4,
     # )
+
+    # NOTE: -- FLOOD RISK
+    flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIR")
+    data = flood_image_factory.data_for_domain(extent, resolution)
+    x = ax.imshow(
+        data,
+        extent=extent,
+        cmap="Reds",
+        alpha=1,
+    )
+
+    fig.colorbar(x)
     #
     # NOTE: -- FLASH FLOOD RISK
     flash_flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIRBANDANG")
