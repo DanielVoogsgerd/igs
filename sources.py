@@ -1,4 +1,4 @@
-#!/usr/env/pythore
+#!/usr/env/python
 from datetime import timedelta, date
 from io import BytesIO
 import logging
@@ -433,6 +433,11 @@ class CHIRPSSource(Source):
             logger.debug(f"{self.IDENTIFIER}: cache hit for {req.url}")
         else:
             logger.debug(f"{self.IDENTIFIER}: cache miss for {req.url}")
+
+        if res.from_cache:
+            print(f"Cache hit for {req.url}")
+        else:
+            print(f"Cache miss for {req.url}")
 
         decompressed = gzip.open(BytesIO(res.content))
 
