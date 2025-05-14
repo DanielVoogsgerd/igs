@@ -11,7 +11,6 @@ import requests_cache
 import numpy as np
 
 from sources import *
-from utils import grow_extent
 from interface import *
 
 SESSION = requests_cache.CachedSession(
@@ -37,14 +36,13 @@ def main():
     lat = np.array([-10.00, -4.75])
     lon = np.array([104.50, 120])
 
-    extent = grow_extent((*lon, *lat), angular_resolution)
-    small_extent = (108, 115, -8, -6)  # for debugging purposes
+    extent = Extent(*lon, *lat).grow_extent(angular_resolution)
     del lon, lat
 
     print("Map extent: ", extent)
 
-    lon_res = int((extent[1] - extent[0]) // angular_resolution + 1)
-    lat_res = int((extent[3] - extent[2]) // angular_resolution + 1)
+    lon_res = int((extent.lon_max - extent.lon_min) // angular_resolution + 1)
+    lat_res = int((extent.lat_max - extent.lat_min) // angular_resolution + 1)
 
     resolution = lat_res, lon_res
     print("Map resolution", resolution)
@@ -53,20 +51,17 @@ def main():
 
     precipitation_factory = NOAAGfsSource("20250513", "00", 12, "apcpsfc")
     rain_data = precipitation_factory.fetch_data(extent, resolution)
+    rain_data = rain_data.identify("noaa-gfs")
 
-    flood_risk_data = rain_data  # Temporary as Bnpb (InaRisk) is down
-    # flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIR")
-    # flood_risk_data = flood_image_factory.fetch_data(extent, resolution)
+    flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIR")
+    flood_risk_data = flood_image_factory.fetch_data(extent, resolution)
+    flood_risk_data = flood_risk_data.identify("bnpb-inarisk-flood")
 
-    flood_hazard_index = 0.2 * flood_risk_data * 20 * rain_data * 0.8
-
-    print(type(flood_hazard_index))
-    print(np.max(flood_hazard_index))
+    flood_hazard_index = 0.2 * flood_risk_data * 20 + rain_data * 0.8
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1, projection=map_projection)
-    # ax.set_extent((-180, 180, -90, 90))
-    ax.set_extent(extent)
+    ax.set_extent(extent.as_tuple)
 
     gdf = gpd.read_file(
         os.path.join(
@@ -85,7 +80,8 @@ def main():
     bandung.geometry.boundary.plot(ax=ax)
 
     flood_hazard_index.plot(ax, cmap="Reds")
-    rain_data.plot(ax, cmap="Reds")
+    # flood_risk_data.plot(ax, cmap="Reds")
+    # rain_data.plot(ax, cmap="Reds")
     ax.add_feature(cfeature.COASTLINE)
     ax.add_feature(cfeature.STATES)
 
