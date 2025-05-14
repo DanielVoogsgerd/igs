@@ -11,6 +11,7 @@ Resolution = typing.Tuple[int, int]
 Coordinate = typing.Tuple[float, float]
 
 SourceIdentifier = str
+HazardIndexIdentifier = str
 
 Angle = float
 
@@ -130,7 +131,7 @@ class RasterizedInformation:
 
 @dataclass
 class IdentifiedRasterizedInformation(RasterizedInformation):
-    """A wrapper around RasterizedInformation, but tagged with a idenfier.
+    """A wrapper around RasterizedInformation, but tagged with a identifier.
 
     This data can be used by notifiers to request certain datasets from a registry
     """
@@ -150,21 +151,6 @@ class IdentifiedRasterizedInformation(RasterizedInformation):
         print("Warning, reidentifying identified data source")
         return super().identify(identifier)
 
-    #
-    # def __mul__(self, other):
-    #     # TODO: We could return a subset if the maps overlap but have a different extent
-    #     if isinstance(other, RasterizedInformation):
-    #         print("Comparing apples to apples")
-    #         if self.extent != other.extent:
-    #             raise Exception("Rasters do not line up")
-    #
-    #         if self.raster.shape != other.raster.shape:
-    #             raise Exception("Rasters are not of the same shape")
-    #
-    #         return RasterizedInformation(self.extent, self.raster * other.raster)
-    #
-    #     return RasterizedInformation(self.extent, self.raster * other)
-
 
 class Source(ABC):
     @abstractmethod
@@ -178,11 +164,16 @@ class Source(ABC):
     def max_resolution(self) -> Resolution:
         pass
 
+    @property
+    @abstractmethod
+    def provides(self) -> SourceIdentifier:
+        pass
+
 
 class HazardIndex(ABC):
     @abstractmethod
     def calculate_index(
-        self, rasters: typing.List[IdentifiedRasterizedInformation]
+        self, rasters: typing.Dict[SourceIdentifier, IdentifiedRasterizedInformation]
     ) -> RasterizedInformation:
         pass
 
@@ -191,13 +182,57 @@ class HazardIndex(ABC):
     def required_sources(self) -> typing.List[SourceIdentifier]:
         pass
 
+    @property
+    @abstractmethod
+    def provides(self) -> HazardIndexIdentifier:
+        pass
+
 
 class Notifier(ABC):
     @abstractmethod
-    def notify(self, x: RasterizedInformation):
+    def notify(self, notify_raster: RasterizedInformation):
         pass
 
     @property
     @abstractmethod
     def responsible_extent(self) -> Extent:
+        pass
+
+    @property
+    @abstractmethod
+    def required_indices(self) -> typing.List[HazardIndexIdentifier]:
+        pass
+
+
+class Registry:
+    def __init__(self):
+        self._sources = {}
+        self._hazard_indices = {}
+        self._notifiers = []
+
+    def register_source(self, source: Source):
+        identifier = source.provides
+
+        if identifier in self._sources:
+            print("Warning: Re-registering an existing source, overwriting")
+
+        self._sources[identifier] = source
+
+    def register_hazard_index(self, index: HazardIndex):
+        identifier = index.provides
+
+        if identifier in self._hazard_indices:
+            print("Warning: Re-registering an existing hazard index, overwriting")
+
+        self._hazard_indices[identifier] = index
+
+    def register_notifier(self, notifier: Notifier):
+        self._notifiers.append(notifier)
+
+    def run(self):
+        # TODO:
+        # - Find notifiers
+        # - Find required hazard indices
+        # - Find required sources
+        # - Resolve dependency chain
         pass

@@ -27,6 +27,7 @@ SESSION = requests_cache.CachedSession(
 
 RESOLUTION = 2**10
 PLATE_CARREE_EPSG = 32662
+MAP_PROJECTION = ccrs.PlateCarree()
 
 
 def main():
@@ -47,45 +48,53 @@ def main():
     resolution = lat_res, lon_res
     print("Map resolution", resolution)
 
-    map_projection = ccrs.PlateCarree()
+    registry = Registry()
+    registry.register_source(NOAAGfsSource("20250513", "00", 12, "apcpsfc"))
+    registry.register_source(BnpbSource("INDEKS_BAHAYA_BANJIR"))
 
-    precipitation_factory = NOAAGfsSource("20250513", "00", 12, "apcpsfc")
-    rain_data = precipitation_factory.fetch_data(extent, resolution)
-    rain_data = rain_data.identify("noaa-gfs")
+    hazard_index = InAWAREHazardIndex()
 
-    flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIR")
-    flood_risk_data = flood_image_factory.fetch_data(extent, resolution)
-    flood_risk_data = flood_risk_data.identify("bnpb-inarisk-flood")
-
-    flood_hazard_index = 0.2 * flood_risk_data * 20 + rain_data * 0.8
-
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1, projection=map_projection)
-    ax.set_extent(extent.as_tuple)
-
-    gdf = gpd.read_file(
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "cadastre/gadm41_IDN_2.shp"
-        )
-    )
-    gdf = gpd.read_file(
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "cadastre/gadm41_IDN_2.shp"
-        )
-    )
-
-    bandung = gdf[(gdf["NAME_2"] == "Bandung") & (gdf["TYPE_2"] == "Kabupaten")]
-    bandung.geometry.boundary.plot(ax=ax)
-    bandung = gdf[(gdf["NAME_2"] == "Bandung") & (gdf["TYPE_2"] == "Kabupaten")]
-    bandung.geometry.boundary.plot(ax=ax)
-
-    flood_hazard_index.plot(ax, cmap="Reds")
-    # flood_risk_data.plot(ax, cmap="Reds")
-    # rain_data.plot(ax, cmap="Reds")
-    ax.add_feature(cfeature.COASTLINE)
-    ax.add_feature(cfeature.STATES)
+    # TODO: Link the
 
     plt.show()
+
+
+class InAWAREHazardIndex(HazardIndex):
+    def calculate_index(
+        self, rasters: typing.Dict[SourceIdentifier, IdentifiedRasterizedInformation]
+    ) -> RasterizedInformation:
+        return (
+            rasters["inarisk-flood-risk-index"] * 0.2 * 20
+            + rasters["rain-data-today"] * 0.8
+        )
+
+    @property
+    def required_sources(self) -> typing.List[SourceIdentifier]:
+        return ["rain-data-today", "inarisk-flood-risk-index"]
+
+
+class PlotNotifier(Notifier):
+    def notify(self, notify_raster: RasterizedInformation):
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1, projection=MAP_PROJECTION)
+        ax.set_extent(notify_raster.extent)
+
+        gdf = gpd.read_file(
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "cadastre/gadm41_IDN_2.shp"
+            )
+        )
+
+        bandung = gdf[(gdf["NAME_2"] == "Bandung") & (gdf["TYPE_2"] == "Kabupaten")]
+        bandung.geometry.boundary.plot(ax=ax)
+
+        notify_raster.plot(ax, cmap="Reds")
+        ax.add_feature(cfeature.COASTLINE)
+        ax.add_feature(cfeature.STATES)
+
+    @property
+    def responsible_extent(self) -> Extent:
+        return Extent(-180, 180, -90, 90)
 
 
 if __name__ == "__main__":
