@@ -12,6 +12,7 @@ import numpy as np
 
 from sources import *
 from interface import *
+from areas import map_grid_cells_to_areas
 
 SESSION = requests_cache.CachedSession(
     "demo_cache",
@@ -55,6 +56,7 @@ def main():
     registry.register_hazard_index(InAWAREHazardIndex())
 
     registry.register_notifier(PlotNotifier())
+    registry.register_notifier(ConsoleAreaNotifier())
 
     registry.run(extent, resolution)
 
@@ -74,14 +76,16 @@ class InAWAREHazardIndex(HazardIndex):
     @property
     def required_sources(self) -> typing.List[SourceIdentifier]:
         return ["rain-data-today", "inarisk-flood-risk-index"]
-    
+
     @property
     def provides(self) -> HazardIndexIdentifier:
         return "inaware-flood-risk-index"
 
 
 class PlotNotifier(Notifier):
-    def notify(self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]):
+    def notify(
+        self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]
+    ):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection=MAP_PROJECTION)
         ax.set_extent(notify_raster["inaware-flood-risk-index"].extent.as_tuple)
@@ -103,10 +107,40 @@ class PlotNotifier(Notifier):
     @property
     def responsible_extent(self) -> Extent:
         return Extent(-180, 180, -90, 90)
-    
+
     @property
     def required_indices(self) -> typing.List[HazardIndexIdentifier]:
         return ["inaware-flood-risk-index"]
+
+
+class ConsoleAreaNotifier(Notifier):
+    def notify(
+        self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]
+    ):
+        THRESHOLD_VALUE = 32
+
+        raster_gdf = notify_raster["inaware-flood-risk-index"].to_gdf()
+        raster_gdf_filtered = raster_gdf[raster_gdf["value"] >= THRESHOLD_VALUE]
+        areas_gdf = map_grid_cells_to_areas(raster_gdf_filtered)
+
+        if areas_gdf.empty:
+            print("No affected areas found.")
+            return
+
+        print(f"Affected areas ({len(areas_gdf)}):")
+        # Currently printed at gadm level 3.
+        sorted_areas = areas_gdf.sort_values(by="NAME_3")
+        for row in sorted_areas.itertuples():
+            print(f"- {row.NAME_3}, GID: {row.GID_3}")
+
+    @property
+    def responsible_extent(self) -> Extent:
+        return Extent(-180, 180, -90, 90)  # TODO(): What is this used for?
+
+    @property
+    def required_indices(self) -> typing.List[HazardIndexIdentifier]:
+        return ["inaware-flood-risk-index"]
+
 
 if __name__ == "__main__":
     main()
