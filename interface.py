@@ -138,8 +138,7 @@ class RasterizedInformation:
         The polygons are stored in the "geometry" column.
         """
         yn, xn = self.raster.shape
-        pixel_width = (self.extent.lon_max - self.extent.lon_min) / xn
-        pixel_height = (self.extent.lat_max - self.extent.lat_min) / yn
+        pixel_width, pixel_height = self.extent.pixel_size((yn, xn))
         assert pixel_width > 0
         assert pixel_height > 0
 
