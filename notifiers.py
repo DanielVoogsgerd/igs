@@ -48,6 +48,43 @@ class PlotNotifier(Notifier):
         return ["inaware-flood-risk-index"]
 
 
+class ConsoleGridNotifier(Notifier):
+    IDENTIFIER = "console-grid-notifier"
+
+    def notify(
+        self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]
+    ):
+        THRESHOLD_VALUE = 32
+
+        raster_gdf = notify_raster["inaware-flood-risk-index"].to_gdf()
+        raster_gdf_filtered = raster_gdf[raster_gdf["value"] >= THRESHOLD_VALUE]
+
+        if raster_gdf_filtered.empty:
+            logger.info("ConsoleGridNotifier: No grid cells found.")
+            return
+
+        logger.info(
+            f"ConsoleGridNotifier - Affected grid cells ({len(raster_gdf_filtered)}):"
+        )
+        for cell in raster_gdf_filtered.itertuples():
+            coords = cell.geometry.exterior.coords
+            logger.info(f"- Value: {cell.value:.2f}")
+            logger.info(
+                f"  ⌜{coords[0][0]:.2f}, {coords[0][1]:.2f} - {coords[1][0]:.2f}, {coords[1][1]:.2f}⌝"
+            )
+            logger.info(
+                f"  ⌞{coords[3][0]:.2f}, {coords[3][1]:.2f} - {coords[2][0]:.2f}, {coords[2][1]:.2f}⌟"
+            )
+
+    @property
+    def responsible_extent(self) -> Extent:
+        return Extent(-180, 180, -90, 90)  # TODO(): What is this used for?
+
+    @property
+    def required_indices(self) -> typing.List[HazardIndexIdentifier]:
+        return ["inaware-flood-risk-index"]
+
+
 class ConsoleAreaNotifier(Notifier):
     IDENTIFIER = "console-area-notifier"
 
