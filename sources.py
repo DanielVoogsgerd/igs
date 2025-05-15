@@ -1,6 +1,7 @@
 #!/usr/env/pythore
 from datetime import timedelta, date
 from io import BytesIO
+import logging
 
 import gzip
 import rasterio
@@ -11,14 +12,15 @@ import xarray as xr
 from PIL import Image
 from pyproj import CRS
 from requests import Request
-from interface import Source, IdentifiedRasterizedInformation, Extent
-
-from custom_types import Resolution
+from interface import Source, RasterizedInformation, Extent, Resolution
 from utils import (
     get_bbox_xy,
     reproject_gdal,
     _zoom_to_pixel_size,
 )
+
+
+logger = logging.getLogger(__name__)
 
 PLATE_CARREE_EPSG = 32662
 
@@ -49,8 +51,9 @@ class BnpbSource(Source):
     DATA_RESOLUTION = 100  # in meters
     EPSG = 3395
 
-    def __init__(self, source):
-        self.bnpb_source = source
+    def __init__(self, source_identifier, bnpb_source):
+        self.IDENTIFIER = source_identifier
+        self.bnpb_source = bnpb_source
         self.crs = ccrs.epsg(str(self.EPSG))
 
     def _get_data(self, extent: Extent, resolution: Resolution):
@@ -77,15 +80,12 @@ class BnpbSource(Source):
             },
         ).prepare()
 
-        print("Sending request to bnpb")
-
         res = SESSION.send(req, timeout=4)
         # res = Session().send(req)
         if res.status_code != 200:
-            print("Bnpb request failed!")
-            print(res.text)
-
-        print("Received response from bnpb")
+            logger.error(f"{self.IDENTIFIER}: fetching failed")
+            logger.error(res.text)
+            return None
 
         i = Image.open(BytesIO(res.content))
 
@@ -115,8 +115,7 @@ class BnpbSource(Source):
         self,
         dst_extent: Extent,
         dst_resolution: Resolution,
-    ) -> IdentifiedRasterizedInformation:
-        print("Fetching data for bpbn")
+    ) -> RasterizedInformation:
         resampling = "bilinear"
         src_crs = CRS.from_epsg(self.EPSG)
         dst_crs = CRS.from_epsg(PLATE_CARREE_EPSG)
@@ -140,7 +139,7 @@ class BnpbSource(Source):
         )
 
         src_img = self._get_data(src_extent, (src_resolution_lat, src_resolution_lon))
-        print("Image dimensions:", np.array(src_img).shape)
+        logger.debug(f"{self.IDENTIFIER}: Image dimensions: {np.array(src_img).shape}")
         # Combine RGB channels as it's a greyscale image
         # src_data = np.sum(src_img, axis=2, dtype=np.float32)
         src_data = np.array(src_img, dtype=np.float32)[:, :, 0] / 255
@@ -155,7 +154,7 @@ class BnpbSource(Source):
             resampling,
         )
 
-        return IdentifiedRasterizedInformation("bpnb", ang_extent, output)
+        return RasterizedInformation(ang_extent, output)
 
     @property
     def max_resolution(self):
@@ -163,9 +162,24 @@ class BnpbSource(Source):
         return (100, 100)
 
 
+class BnpbInaRiskFloodRiskIndexSource(BnpbSource):
+    IDENTIFIER = "bnpb-inarisk-flood-risk-index"
+
+    def __init__(self):
+        super().__init__(self.IDENTIFIER, "INDEKS_BAHAYA_BANJIR")
+
+
+class BnpbInaRiskFlashFloodRiskIndexSource(BnpbSource):
+    IDENTIFIER = "bnpb-inarisk-flash-flood-risk-index"
+
+    def __init__(self):
+        super().__init__(self.IDENTIFIER, "INDEKS_BAHAYA_BANJIRBANDANG")
+
+
 class NOAAGfsSource(Source):
+    IDENTIFIER = "noaa-gfs-rain-data"
+
     DATA_RESOLUTION = 0.25
-    IDENTIFIER = "noaa-gfs"
 
     def __init__(self, date, cycle, hours_ahead, dataset):
         self.crs = ccrs.PlateCarree()
@@ -173,6 +187,7 @@ class NOAAGfsSource(Source):
         self.date = date
         # 4 cycles are published every day (one every six hours),
         # must be '00', '06', '12', or '18'
+        assert cycle in ["00", "06", "12", "18"]
         self.cycle = cycle
         # The data is accumulated (summed) precipitation over X hours, indicate
         # here how many hours ahead you want to look (gets rounded down to 3h intervals)
@@ -224,7 +239,7 @@ class NOAAGfsSource(Source):
         dst_extent: Extent,
         dst_resolution: Resolution,
         resampling: str = "bilinear",
-    ) -> IdentifiedRasterizedInformation:
+    ) -> RasterizedInformation:
         """
 
         Returns a two dimensional array of shape resolution
@@ -247,7 +262,9 @@ class NOAAGfsSource(Source):
         ang_extent = dst_extent
         dst_extent = dst_extent.reproject(ccrs.PlateCarree(), ccrs.Projection(dst_crs))
 
-        print("x", np.min(src_data.values), np.max(src_data.values))
+        logger.debug(
+            f"{self.IDENTIFIER}: Data range: {np.min(src_data.values)}, {np.max(src_data.values)}"
+        )
 
         output = reproject_gdal(
             np.flipud(src_data.values),
@@ -259,7 +276,7 @@ class NOAAGfsSource(Source):
             resampling,
         )
 
-        return IdentifiedRasterizedInformation(self.IDENTIFIER, ang_extent, output)
+        return RasterizedInformation(ang_extent, output)
 
     @property
     def max_resolution(self):
@@ -267,7 +284,10 @@ class NOAAGfsSource(Source):
         return (0.5, 0.5)
 
 
+# TODO: Complete this source
 class BmkgSource(Source):
+    IDENTIFIER = "bmkg-rain-data"
+
     # EPSG = 4326
     # FIXME: The server source is in 4326, but we run into some degree vs meter UoM mismatches, I think
     EPSG = 3395
@@ -317,12 +337,14 @@ class BmkgSource(Source):
 
         src_img = self._get_data(src_extent, resolution)
 
-        print("Image dimensions:", np.array(src_img).shape)
+        logger.debug(f"{self.IDENTIFIER}: image dimensions: {np.array(src_img).shape}")
 
         # Combine RGB channels as it's a greyscale image
         src_data = np.sum(src_img, axis=2, dtype=np.float32)
 
-        print(np.min(src_data), np.max(src_data))
+        logger.debug(
+            f"{self.IDENTIFIER}: data range: {np.min(src_data)}, {np.max(src_data)}"
+        )
 
         output = reproject_gdal(
             src_data,
@@ -339,7 +361,7 @@ class BmkgSource(Source):
     def _get_data(self, extent: Extent, resolution: Resolution):
         width, height = resolution
         lon_min, lon_max, lat_min, lat_max = extent.as_tuple
-        print("Getting rain data")
+        logger.debug(f"{self.IDENTIFIER}: getting rain data")
         base_url = "https://gis.bmkg.go.id/arcgis/services/Peta_Curah_Hujan_dan_Hari_Hujan_/MapServer/WMSServer"
         bbox = f"{lon_min:.6f},{lat_min:.6f},{lon_max:.6f},{lat_max:.6f}"
         params = {
@@ -357,22 +379,24 @@ class BmkgSource(Source):
 
         req = SESSION.get(base_url, params=params)
 
-        print(req.url)
-
         if req.headers.get("Content-Type") != "image/png":
-            print(req.text)
-            return
+            logger.error(f"{self.IDENTIFIER}: fetching failed")
+            logger.error(req.text)
+            return None
 
         i = Image.open(BytesIO(req.content))
 
         x = np.array(i)
 
-        print(np.min(x), np.max(x))
+        logger.debug(f"{self.IDENTIFIER}: data range: {np.min(x)}, {np.max(x)}")
 
         return i
 
 
+# TODO: Complete this source
 class CHIRPSSource(Source):
+    IDENTIFIER = "chirps-historical-rain-data"
+
     DATA_RESOLUTION = 0.05
     DATA_EXTENT = Extent(-180, 180, -50, 50)
     EPSG = 4326
@@ -387,20 +411,22 @@ class CHIRPSSource(Source):
             f"https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_daily/tifs/p05/{self.date.year}/chirps-v2.0.{self.date.strftime('%Y.%m.%d')}.tif.gz",
         ).prepare()
 
+        logger.debug(f"{self.IDENTIFIER}: fetching data")
         res = SESSION.send(req)
         if res.status_code != 200:
-            print("CHIRPS request failed!")
-            print(res.text)
+            logger.error(f"{self.IDENTIFIER}: fetching failed")
+            logger.error(res.text)
+            return None
 
         if res.from_cache:
-            print(f"Cache hit for {req.url}")
+            logger.debug(f"{self.IDENTIFIER}: cache hit for {req.url}")
         else:
-            print(f"Cache miss for {req.url}")
+            logger.debug(f"{self.IDENTIFIER}: cache miss for {req.url}")
 
         decompressed = gzip.open(BytesIO(res.content))
 
         i = rasterio.open(decompressed)
-        print("Data CRS:", i.crs)
+        logger.debug(f"{self.IDENTIFIER}: data CRS: {i.crs}")
         return i.read(1)
 
     def image_for_domain(self, target_domain, zoom):
@@ -425,8 +451,8 @@ class CHIRPSSource(Source):
 
         src_data = self._get_data()
         src_data[src_data < 0] = 0
-        print("Got data!", src_data.shape)
-        print("Data CRS", self.crs)
+        logger.debug(f"{self.IDENTIFIER}: got data! {src_data.shape}")
+        logger.debug(f"{self.IDENTIFIER}: data CRS {self.crs}")
 
         output = reproject_gdal(
             src_data,

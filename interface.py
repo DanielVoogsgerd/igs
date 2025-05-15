@@ -1,13 +1,19 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from collections import namedtuple
 
+import geopandas as gpd
+from shapely.geometry import Polygon
 import numpy as np
 
 import typing
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Extent = typing.Tuple[int, int, int, int]
 Bounds = typing.Tuple[float, float, float, float]
-Resolution = typing.Tuple[int, int]
+Resolution = namedtuple("Resolution", ["lon", "lat"])
 Coordinate = typing.Tuple[float, float]
 
 SourceIdentifier = str
@@ -68,12 +74,12 @@ class Extent:
         return Extent(dst_lon_min, dst_lon_max, dst_lat_min, dst_lat_max)
 
     def pixel_size(self, resolution: Resolution):
-        """Calcutes the size of each pixel given a certain image resolution for this extent
+        """Calculates the size of each pixel given a certain image resolution for this extent
 
         Warning: This resolution expects latitude first, so (lat, lon)
         """
-        psize_lon = (self.lon_max - self.lon_min) / resolution[1]
-        psize_lat = (self.lat_max - self.lat_min) / resolution[0]
+        psize_lon = (self.lon_max - self.lon_min) / resolution.lon
+        psize_lat = (self.lat_max - self.lat_min) / resolution.lat
 
         return (psize_lon, psize_lat)
 
@@ -82,7 +88,7 @@ class Extent:
 class RasterizedInformation:
     """A rasterized data object storing geographical data with its metadata.
 
-    Note: This representation expects the data and extent to use a PlateCarree projcetion of the earth with angles as Unit of Measurement (UoM)
+    Note: This representation expects the data and extent to use a PlateCarree projection of the earth with angles as Unit of Measurement (UoM)
 
     It provides some convenience methods for common operations on this data
     """
@@ -90,13 +96,9 @@ class RasterizedInformation:
     extent: Extent
     raster: np.ndarray
 
-    def identify(self, identifier: SourceIdentifier):
-        return IdentifiedRasterizedInformation(identifier, self.extent, self.raster)
-
     def __mul__(self, other):
         # TODO: We could return a subset if the maps overlap but have a different extent
         if isinstance(other, type(self)):
-            print("Comparing apples to apples")
             if self.extent != other.extent:
                 raise Exception("Rasters do not line up")
 
@@ -107,10 +109,11 @@ class RasterizedInformation:
 
         return RasterizedInformation(self.extent, self.raster * other)
 
+    __rmul__ = __mul__
+
     def __add__(self, other):
         # TODO: We could return a subset if the maps overlap but have a different extent
         if isinstance(other, type(self)):
-            print("Comparing apples to apples")
             if self.extent != other.extent:
                 raise Exception("Rasters do not line up")
 
@@ -123,40 +126,56 @@ class RasterizedInformation:
 
     def plot(self, ax, **kwargs):
         kwargs["extent"] = self.extent.as_tuple
-        print(ax, kwargs)
+        logger.debug(f"plot: {ax}, {kwargs}")
         ax.imshow(self.raster, **kwargs)
 
-    __rmul__ = __mul__
+    # TODO: Confirm why this CRS is being used.
+    def to_gdf(self, crs="EPSG:4326") -> gpd.GeoDataFrame:
+        """Converts the raster into a GeoDataFrame of polygons.
+
+        Raster array values are stored in the "value" column.
+        The polygons are stored in the "geometry" column.
+        """
+        yn, xn = self.raster.shape
+        pixel_width, pixel_height = self.extent.pixel_size(Resolution(lat=yn, lon=xn))
+        assert pixel_width > 0
+        assert pixel_height > 0
+
+        polygons, values = [], []
+
+        for y in range(yn):
+            for x in range(xn):
+                x0 = self.extent.lon_min + x * pixel_width
+                y0 = self.extent.lat_max - (y + 1) * pixel_height
+                x1 = x0 + pixel_width
+                y1 = y0 + pixel_height
+                polygons.append(
+                    Polygon([(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)])
+                )
+                values.append(self.raster[y, x])
+
+        # TODO: Extract column names to constants.
+        gdf = gpd.GeoDataFrame({"value": values, "geometry": polygons}, crs=crs)
+        return gdf
 
 
-@dataclass
-class IdentifiedRasterizedInformation(RasterizedInformation):
-    """A wrapper around RasterizedInformation, but tagged with a identifier.
+class Identifiable(ABC):
+    """A class that has an `IDENTIFIER` attribute."""
 
-    This data can be used by notifiers to request certain datasets from a registry
-    """
+    IDENTIFIER = "unset"
 
-    identifier: SourceIdentifier
-    extent: Extent
-    raster: np.ndarray
+    def __str__(self):
+        return f"{self.IDENTIFIER}"
 
-    def __init__(
-        self, identifier: SourceIdentifier, extent: Extent, raster: np.ndarray
-    ):
-        self.identifier = identifier
-        self.extent = extent
-        self.raster = raster
-
-    def identify(self, identifier: SourceIdentifier):
-        print("Warning, reidentifying identified data source")
-        return super().identify(identifier)
+    def __repr__(self):
+        return f"{self.IDENTIFIER}"
 
 
-class Source(ABC):
+class Source(Identifiable):
     @abstractmethod
     def fetch_data(
         self, extent: Extent, resolution: Resolution
-    ) -> IdentifiedRasterizedInformation:
+    ) -> RasterizedInformation:
         pass
 
     @property
@@ -165,15 +184,15 @@ class Source(ABC):
         pass
 
     @property
-    @abstractmethod
     def provides(self) -> SourceIdentifier:
-        pass
+        return self.IDENTIFIER
 
 
-class HazardIndex(ABC):
+class HazardIndex(Identifiable):
     @abstractmethod
     def calculate_index(
-        self, rasters: typing.Dict[SourceIdentifier, IdentifiedRasterizedInformation]
+        self,
+        rasters: typing.Dict[SourceIdentifier, RasterizedInformation],
     ) -> RasterizedInformation:
         pass
 
@@ -183,14 +202,16 @@ class HazardIndex(ABC):
         pass
 
     @property
-    @abstractmethod
     def provides(self) -> HazardIndexIdentifier:
-        pass
+        return self.IDENTIFIER
 
 
-class Notifier(ABC):
+class Notifier(Identifiable):
     @abstractmethod
-    def notify(self, notify_raster: RasterizedInformation):
+    def notify(
+        self,
+        notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation],
+    ):
         pass
 
     @property
@@ -198,6 +219,7 @@ class Notifier(ABC):
     def responsible_extent(self) -> Extent:
         pass
 
+    # TODO: Add support for generic index or passed in the constructor.
     @property
     @abstractmethod
     def required_indices(self) -> typing.List[HazardIndexIdentifier]:
@@ -229,10 +251,44 @@ class Registry:
     def register_notifier(self, notifier: Notifier):
         self._notifiers.append(notifier)
 
-    def run(self):
-        # TODO:
-        # - Find notifiers
-        # - Find required hazard indices
-        # - Find required sources
-        # - Resolve dependency chain
-        pass
+    def run(self, extent: Extent, resolution: Resolution):
+        # TODO: Refactor to generic job queue, where we don't distinguish
+        # between sources, indices and notifiers.
+        # TODO: Parallelize the fetching of data and computation of indices.
+
+        logger.info("Determining dependencies")
+        indices = set(
+            [
+                index_id
+                for notifier in self._notifiers
+                for index_id in notifier.required_indices
+            ]
+        )
+        sources = set(
+            [
+                source_id
+                for index in indices
+                for source_id in self._hazard_indices[index].required_sources
+            ]
+        )
+        logger.debug(f"Notifiers: {self._notifiers}")
+        logger.debug(f"Hazard indices in use: {indices}")
+        logger.debug(f"Sources in use: {sources}")
+
+        logger.info("Fetching data")
+        source_res = {
+            source_id: self._sources[source_id].fetch_data(extent, resolution)
+            for source_id in sources
+        }
+
+        logger.info("Calculating indices")
+        index_res = {
+            index_identifier: self._hazard_indices[index_identifier].calculate_index(
+                source_res
+            )
+            for index_identifier in indices
+        }
+
+        logger.info("Running notifiers")
+        for notifier in self._notifiers:
+            notifier.notify(index_res)

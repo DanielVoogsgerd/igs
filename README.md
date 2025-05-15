@@ -6,4 +6,6 @@
 - (Recommended) Use `uv` as package manager, install [here](https://docs.astral.sh/uv/#installation). Alternatively, use Python 3.11 and `pip install -r requirements.txt`.
 
 ## Run
-- `uv run map.py`
+- `uv run main.py`
+
+- Run `uv run main.py --help` to list the available arguments (e.g., `logLevel`).
