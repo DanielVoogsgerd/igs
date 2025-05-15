@@ -52,13 +52,16 @@ def main():
     registry.register_source(NOAAGfsSource("20250513", "00", 12, "apcpsfc"))
     registry.register_source(BnpbSource("INDEKS_BAHAYA_BANJIR"))
 
-    hazard_index = InAWAREHazardIndex()
+    registry.register_hazard_index(InAWAREHazardIndex())
 
-    # TODO: Link the
+    registry.register_notifier(PlotNotifier())
+
+    registry.run(extent, resolution)
 
     plt.show()
 
 
+# TODO: Change to H-MHEWS
 class InAWAREHazardIndex(HazardIndex):
     def calculate_index(
         self, rasters: typing.Dict[SourceIdentifier, IdentifiedRasterizedInformation]
@@ -71,13 +74,17 @@ class InAWAREHazardIndex(HazardIndex):
     @property
     def required_sources(self) -> typing.List[SourceIdentifier]:
         return ["rain-data-today", "inarisk-flood-risk-index"]
+    
+    @property
+    def provides(self) -> HazardIndexIdentifier:
+        return "inaware-flood-risk-index"
 
 
 class PlotNotifier(Notifier):
-    def notify(self, notify_raster: RasterizedInformation):
+    def notify(self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection=MAP_PROJECTION)
-        ax.set_extent(notify_raster.extent)
+        ax.set_extent(notify_raster["inaware-flood-risk-index"].extent.as_tuple)
 
         gdf = gpd.read_file(
             os.path.join(
@@ -85,17 +92,21 @@ class PlotNotifier(Notifier):
             )
         )
 
+        # Plot Bandung outline.
         bandung = gdf[(gdf["NAME_2"] == "Bandung") & (gdf["TYPE_2"] == "Kabupaten")]
         bandung.geometry.boundary.plot(ax=ax)
 
-        notify_raster.plot(ax, cmap="Reds")
+        notify_raster["inaware-flood-risk-index"].plot(ax, cmap="Reds")
         ax.add_feature(cfeature.COASTLINE)
         ax.add_feature(cfeature.STATES)
 
     @property
     def responsible_extent(self) -> Extent:
         return Extent(-180, 180, -90, 90)
-
+    
+    @property
+    def required_indices(self) -> typing.List[HazardIndexIdentifier]:
+        return ["inaware-flood-risk-index"]
 
 if __name__ == "__main__":
     main()
