@@ -68,7 +68,7 @@ class Extent:
         return Extent(dst_lon_min, dst_lon_max, dst_lat_min, dst_lat_max)
 
     def pixel_size(self, resolution: Resolution):
-        """Calcutes the size of each pixel given a certain image resolution for this extent
+        """Calculates the size of each pixel given a certain image resolution for this extent
 
         Warning: This resolution expects latitude first, so (lat, lon)
         """
@@ -82,7 +82,7 @@ class Extent:
 class RasterizedInformation:
     """A rasterized data object storing geographical data with its metadata.
 
-    Note: This representation expects the data and extent to use a PlateCarree projcetion of the earth with angles as Unit of Measurement (UoM)
+    Note: This representation expects the data and extent to use a PlateCarree projection of the earth with angles as Unit of Measurement (UoM)
 
     It provides some convenience methods for common operations on this data
     """
