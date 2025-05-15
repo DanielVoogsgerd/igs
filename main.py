@@ -65,7 +65,7 @@ def main():
 
     registry.register_hazard_index(InAWAREHazardIndex())
 
-    # registry.register_notifier(PlotNotifier())
+    registry.register_notifier(PlotNotifier())
     registry.register_notifier(ConsoleAreaNotifier())
 
     registry.run(extent, resolution)
