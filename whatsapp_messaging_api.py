@@ -38,17 +38,7 @@ def setup_whatsapp_config(wait_time=15, close_tab=True):
     logger.info("WhatsApp configuration set up successfully")
 
 def send_whatsapp_message(phone_number, message, group_id=None):
-    """
-    Send a WhatsApp message using headless Chrome browser.
-    
-    Args:
-        phone_number: The recipient's phone number (with country code)
-        message: The message content
-        group_id: Optional group ID for group messages
-    
-    Returns:
-        Dictionary with status and message
-    """
+
     try:
         # Configure Chrome options for headless mode
         chrome_options = Options()
@@ -206,17 +196,7 @@ def send_alert():
         return jsonify(result), 500
 
 def send_flood_alert(hazard_index, group_id=None, phone_number=None):
-    """
-    Send a flood alert to a WhatsApp group or individual.
-    
-    Args:
-        hazard_index: The flood hazard index value
-        group_id: Optional WhatsApp group ID
-        phone_number: Optional recipient phone number
-        
-    Returns:
-        Dictionary with status and message
-    """
+
     if not group_id and not phone_number:
         logger.error("Either group_id or phone_number must be provided")
         return {"status": "error", "message": "Either group_id or phone_number must be provided"}
