@@ -4,6 +4,8 @@ from interface import *
 
 # TODO: Change to H-MHEWS
 class InAWAREHazardIndex(HazardIndex):
+    IDENTIFIER = "inaware-flood-risk-index"
+
     def calculate_index(
         self, rasters: typing.Dict[SourceIdentifier, IdentifiedRasterizedInformation]
     ) -> RasterizedInformation:
@@ -18,4 +20,4 @@ class InAWAREHazardIndex(HazardIndex):
 
     @property
     def provides(self) -> HazardIndexIdentifier:
-        return "inaware-flood-risk-index"
+        return self.IDENTIFIER
