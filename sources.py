@@ -48,8 +48,9 @@ class BnpbSource(Source):
     DATA_RESOLUTION = 100  # in meters
     EPSG = 3395
 
-    def __init__(self, source):
-        self.bnpb_source = source
+    def __init__(self, source_identifier, bnpb_source):
+        self.IDENTIFIER = source_identifier
+        self.bnpb_source = bnpb_source
         self.crs = ccrs.epsg(str(self.EPSG))
 
     def _get_data(self, extent: Extent, resolution: Resolution):
@@ -154,7 +155,7 @@ class BnpbSource(Source):
             resampling,
         )
 
-        return IdentifiedRasterizedInformation("bpnb", ang_extent, output)
+        return IdentifiedRasterizedInformation(self.IDENTIFIER, ang_extent, output)
 
     @property
     def max_resolution(self):
@@ -163,12 +164,27 @@ class BnpbSource(Source):
 
     @property
     def provides(self):
-        return "inarisk-flood-risk-index"
+        return self.IDENTIFIER
+
+
+class BnpbInaRiskFloodRiskIndexSource(BnpbSource):
+    IDENTIFIER = "bnpb-inarisk-flood-risk-index"
+
+    def __init__(self):
+        super().__init__(self.IDENTIFIER, "INDEKS_BAHAYA_BANJIR")
+
+
+class BnpbInaRiskFlashFloodRiskIndexSource(BnpbSource):
+    IDENTIFIER = "bnpb-inarisk-flash-flood-risk-index"
+
+    def __init__(self):
+        super().__init__(self.IDENTIFIER, "INDEKS_BAHAYA_BANJIRBANDANG")
 
 
 class NOAAGfsSource(Source):
+    IDENTIFIER = "noaa-gfs-rain-data"
+
     DATA_RESOLUTION = 0.25
-    IDENTIFIER = "noaa-gfs"
 
     def __init__(self, date, cycle, hours_ahead, dataset):
         self.crs = ccrs.PlateCarree()
@@ -271,10 +287,13 @@ class NOAAGfsSource(Source):
 
     @property
     def provides(self):
-        return "rain-data-today"
+        return self.IDENTIFIER
 
 
+# TODO: Complete this source
 class BmkgSource(Source):
+    IDENTIFIER = "bmkg-rain-data"
+
     # EPSG = 4326
     # FIXME: The server source is in 4326, but we run into some degree vs meter UoM mismatches, I think
     EPSG = 3395
@@ -379,7 +398,10 @@ class BmkgSource(Source):
         return i
 
 
+# TODO: Complete this source
 class CHIRPSSource(Source):
+    IDENTIFIER = "chirps-historical-rain-data"
+
     DATA_RESOLUTION = 0.05
     DATA_EXTENT = Extent(-180, 180, -50, 50)
     EPSG = 4326

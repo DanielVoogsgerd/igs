@@ -49,7 +49,8 @@ def main():
 
     registry = Registry()
     registry.register_source(NOAAGfsSource("20250513", "00", 12, "apcpsfc"))
-    registry.register_source(BnpbSource("INDEKS_BAHAYA_BANJIR"))
+    registry.register_source(BnpbInaRiskFloodRiskIndexSource())
+    registry.register_source(BnpbInaRiskFlashFloodRiskIndexSource())
 
     registry.register_hazard_index(InAWAREHazardIndex())
 
