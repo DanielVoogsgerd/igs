@@ -87,6 +87,8 @@ class BnpbSource(Source):
             logger.error(res.text)
             return None
 
+        print("Received response from bnpb")
+
         i = Image.open(BytesIO(res.content))
 
         return i
@@ -180,6 +182,7 @@ class NOAAGfsSource(Source):
     IDENTIFIER = "noaa-gfs-rain-data"
 
     DATA_RESOLUTION = 0.25
+    IDENTIFIER = "noaa-gfs"
 
     def __init__(self, date, cycle, hours_ahead, dataset):
         self.crs = ccrs.PlateCarree()
