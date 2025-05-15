@@ -7,3 +7,5 @@
 
 ## Run
 - `uv run main.py`
+
+- Run `uv run main.py --help` to list the available arguments (e.g., `logLevel`).
