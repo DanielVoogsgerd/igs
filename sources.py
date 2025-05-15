@@ -11,9 +11,8 @@ import xarray as xr
 from PIL import Image
 from pyproj import CRS
 from requests import Request
-from interface import Source, IdentifiedRasterizedInformation, Extent
+from interface import Source, IdentifiedRasterizedInformation, Extent, Resolution
 
-from custom_types import Resolution
 from utils import (
     get_bbox_xy,
     reproject_gdal,
