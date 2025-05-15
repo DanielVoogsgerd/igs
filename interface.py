@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from collections import namedtuple
 
 import geopandas as gpd
 from shapely.geometry import Polygon
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Extent = typing.Tuple[int, int, int, int]
 Bounds = typing.Tuple[float, float, float, float]
-Resolution = typing.Tuple[int, int]
+Resolution = namedtuple("Resolution", ["lon", "lat"])
 Coordinate = typing.Tuple[float, float]
 
 SourceIdentifier = str
@@ -77,8 +78,8 @@ class Extent:
 
         Warning: This resolution expects latitude first, so (lat, lon)
         """
-        psize_lon = (self.lon_max - self.lon_min) / resolution[1]
-        psize_lat = (self.lat_max - self.lat_min) / resolution[0]
+        psize_lon = (self.lon_max - self.lon_min) / resolution.lon
+        psize_lat = (self.lat_max - self.lat_min) / resolution.lat
 
         return (psize_lon, psize_lat)
 
@@ -136,7 +137,7 @@ class RasterizedInformation:
         The polygons are stored in the "geometry" column.
         """
         yn, xn = self.raster.shape
-        pixel_width, pixel_height = self.extent.pixel_size((yn, xn))
+        pixel_width, pixel_height = self.extent.pixel_size(Resolution(lat=yn, lon=xn))
         assert pixel_width > 0
         assert pixel_height > 0
 

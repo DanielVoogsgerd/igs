@@ -55,7 +55,7 @@ def main():
     lon_res = int((extent.lon_max - extent.lon_min) // angular_resolution + 1)
     lat_res = int((extent.lat_max - extent.lat_min) // angular_resolution + 1)
 
-    resolution = lat_res, lon_res
+    resolution = Resolution(lon=lon_res, lat=lat_res)
     logger.debug(f"Map resolution: {resolution}")
 
     logger.info("Setting up registry")
