@@ -7,7 +7,7 @@ class InAWAREHazardIndex(HazardIndex):
     IDENTIFIER = "inaware-flood-risk-index"
 
     def calculate_index(
-        self, rasters: typing.Dict[SourceIdentifier, IdentifiedRasterizedInformation]
+        self, rasters: typing.Dict[SourceIdentifier, RasterizedInformation]
     ) -> RasterizedInformation:
         return (
             rasters["bnpb-inarisk-flood-risk-index"] * 0.2 * 20

@@ -11,7 +11,7 @@ import xarray as xr
 from PIL import Image
 from pyproj import CRS
 from requests import Request
-from interface import Source, IdentifiedRasterizedInformation, Extent, Resolution
+from interface import Source, RasterizedInformation, Extent, Resolution
 
 from utils import (
     get_bbox_xy,
@@ -115,7 +115,7 @@ class BnpbSource(Source):
         self,
         dst_extent: Extent,
         dst_resolution: Resolution,
-    ) -> IdentifiedRasterizedInformation:
+    ) -> RasterizedInformation:
         print("Fetching data for bpbn")
         resampling = "bilinear"
         src_crs = CRS.from_epsg(self.EPSG)
@@ -155,7 +155,7 @@ class BnpbSource(Source):
             resampling,
         )
 
-        return IdentifiedRasterizedInformation(self.IDENTIFIER, ang_extent, output)
+        return RasterizedInformation(ang_extent, output)
 
     @property
     def max_resolution(self):
@@ -243,7 +243,7 @@ class NOAAGfsSource(Source):
         dst_extent: Extent,
         dst_resolution: Resolution,
         resampling: str = "bilinear",
-    ) -> IdentifiedRasterizedInformation:
+    ) -> RasterizedInformation:
         """
 
         Returns a two dimensional array of shape resolution
@@ -278,7 +278,7 @@ class NOAAGfsSource(Source):
             resampling,
         )
 
-        return IdentifiedRasterizedInformation(self.IDENTIFIER, ang_extent, output)
+        return RasterizedInformation(ang_extent, output)
 
     @property
     def max_resolution(self):
