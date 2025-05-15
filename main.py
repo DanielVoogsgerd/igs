@@ -14,7 +14,10 @@ from sources import *
 from indices import *
 from notifiers import *
 
+import argparse
+
 logger = logging.getLogger(__name__)
+args = None
 
 SESSION = requests_cache.CachedSession(
     "demo_cache",
@@ -34,9 +37,7 @@ MAP_PROJECTION = ccrs.PlateCarree()
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(levelname)8s: %(message)s")
-    logging.getLogger("matplotlib").setLevel(logging.WARNING)
-    logging.getLogger("requests_cache").setLevel(logging.WARNING)
+    set_up_logging()
 
     gdal.UseExceptions()
 
@@ -71,6 +72,33 @@ def main():
     registry.run(extent, resolution)
 
     plt.show()
+
+
+def set_up_logging():
+    logging.basicConfig(
+        level=logging.getLevelName(get_args().logLevel),
+        format="%(levelname)8s: %(message)s",
+    )
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("requests_cache").setLevel(logging.WARNING)
+
+
+def get_args():
+    global args
+    if args is None:
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "-l",
+            "--log",
+            dest="logLevel",
+            choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+            default="INFO",
+            help="Set the logging level",
+        )
+
+        args = parser.parse_args()
+
+    return args
 
 
 if __name__ == "__main__":
