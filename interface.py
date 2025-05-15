@@ -184,9 +184,8 @@ class Source(Identifiable):
         pass
 
     @property
-    @abstractmethod
     def provides(self) -> SourceIdentifier:
-        pass
+        return self.IDENTIFIER
 
 
 class HazardIndex(Identifiable):
@@ -203,9 +202,8 @@ class HazardIndex(Identifiable):
         pass
 
     @property
-    @abstractmethod
     def provides(self) -> HazardIndexIdentifier:
-        pass
+        return self.IDENTIFIER
 
 
 class Notifier(Identifiable):
