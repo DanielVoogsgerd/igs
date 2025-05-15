@@ -1,5 +1,5 @@
 #!/usr/env/python
-from datetime import timedelta, datetime
+from datetime import timedelta
 import os
 
 import cartopy.feature as cfeature
@@ -9,12 +9,12 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from pyproj import Transformer
+from interface import Extent
 
 import requests_cache
 import numpy as np
 
 from sources import *
-from utils import grow_extent
 
 SESSION = requests_cache.CachedSession(
     "demo_cache",
@@ -39,7 +39,7 @@ def main():
     lat = np.array([-10.00, -4.75])
     lon = np.array([104.50, 120])
 
-    extent = grow_extent((*lon, *lat), angular_resolution)
+    extent = Extent(*lon, *lat).grow_extent(angular_resolution).as_tuple
     small_extent = (108, 115, -8, -6)  # for debugging purposes
     del lon, lat
 
@@ -71,7 +71,7 @@ def main():
 
     # NOTE: -- PRECIPITATION (prediction)
     precipitation_factory = NOAAGfsSource("20250429", "00", 12, "apcpsfc")
-    data = precipitation_factory.data_for_domain(extent, resolution)
+    data = precipitation_factory.fetch_data(extent, resolution)
     ax.imshow(
         data,
         extent=extent,
@@ -80,24 +80,26 @@ def main():
     )
 
     # NOTE: -- PRECIPITATION (historic)
-    hist_precipitation_factory = CHIRPSSource(date=datetime.datetime(2024, 1, 1))
-    data = hist_precipitation_factory.data_for_domain(extent, resolution)
-    ax.imshow(
-        data,
-        extent=extent,
-        cmap="Greens",
-        alpha=0.4,
-    )
-
-    # NOTE: -- FLOOD RISK
-    flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIR")
-    # data = flood_image_factory.data_for_domain(extent, resolution)
+    # hist_precipitation_factory = CHIRPSSource(date=datetime(2024, 1, 1))
+    # data = hist_precipitation_factory.data_for_domain(extent, resolution)
     # ax.imshow(
     #     data,
     #     extent=extent,
-    #     cmap="Reds",
+    #     cmap="Greens",
     #     alpha=0.4,
     # )
+
+    # NOTE: -- FLOOD RISK
+    flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIR")
+    data = flood_image_factory.data_for_domain(extent, resolution)
+    x = ax.imshow(
+        data,
+        extent=extent,
+        cmap="Reds",
+        alpha=1,
+    )
+
+    fig.colorbar(x)
     #
     # NOTE: -- FLASH FLOOD RISK
     flash_flood_image_factory = BnpbSource("INDEKS_BAHAYA_BANJIRBANDANG")

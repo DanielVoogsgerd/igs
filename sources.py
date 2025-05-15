@@ -1,9 +1,7 @@
-#!/usr/env/python
-from abc import ABC, abstractmethod
-from datetime import timedelta
+#!/usr/env/pythore
+from datetime import timedelta, date
 from io import BytesIO
 
-import datetime
 import gzip
 import rasterio
 import cartopy.crs as ccrs
@@ -13,13 +11,11 @@ import xarray as xr
 from PIL import Image
 from pyproj import CRS
 from requests import Request
+from interface import Source, IdentifiedRasterizedInformation, Extent
 
-from custom_types import Extent, Resolution
+from custom_types import Resolution
 from utils import (
-    bounds_to_extent,
     get_bbox_xy,
-    grow_extent,
-    reproject_extent,
     reproject_gdal,
     _zoom_to_pixel_size,
 )
@@ -30,7 +26,7 @@ SESSION = requests_cache.CachedSession(
     "demo_cache",
     use_cache_dir=True,  # Save files in the default user cache dir
     cache_control=False,  # Use Cache-Control response headers for expiration, if available
-    expire_after=timedelta(days=7),  # Otherwise expire responses after one day
+    expire_after=timedelta(days=700),  # Otherwise expire responses after one day
     allowable_codes=[
         200,
     ],
@@ -39,21 +35,6 @@ SESSION = requests_cache.CachedSession(
 )
 
 RESOLUTION = 2**10
-
-
-class Source(ABC):
-    @abstractmethod
-    def image_for_domain(self, target_domain, zoom: int):
-        pass
-
-    @abstractmethod
-    def data_for_domain(
-        self,
-        dst_extent: Extent,
-        dst_resolution: Resolution,
-        resampling: str,
-    ) -> np.ndarray:
-        pass
 
 
 # Note that this is still slightly incorrect as our tiles are in the wrong projection, however the source is close to the equator and it.
@@ -72,15 +53,9 @@ class BnpbSource(Source):
         self.bnpb_source = source
         self.crs = ccrs.epsg(str(self.EPSG))
 
-    def _get_data(self, extent, resolution):
-        lon_min, lon_max, lat_min, lat_max = extent
+    def _get_data(self, extent: Extent, resolution: Resolution):
+        bbox = get_bbox_xy(extent.lon_range, extent.lat_range)
 
-        lon = [lon_min, lon_max]
-        lat = [lat_min, lat_max]
-
-        bbox = get_bbox_xy(lon, lat)
-
-        # print("Img pixel size", (lon_max - lon_min) / width)
         height, width = resolution
 
         assert width <= self.MAX_IMAGE_WIDTH
@@ -102,12 +77,18 @@ class BnpbSource(Source):
             },
         ).prepare()
 
-        res = SESSION.send(req)
+        print("Sending request to bnpb")
+
+        res = SESSION.send(req, timeout=4)
+        # res = Session().send(req)
         if res.status_code != 200:
             print("Bnpb request failed!")
             print(res.text)
 
+        print("Received response from bnpb")
+
         i = Image.open(BytesIO(res.content))
+
         return i
 
     def image_for_domain(self, target_domain, zoom):
@@ -130,35 +111,39 @@ class BnpbSource(Source):
 
         return img, extent, "upper"
 
-    def data_for_domain(
+    def fetch_data(
         self,
         dst_extent: Extent,
         dst_resolution: Resolution,
-        resampling: str = "bilinear",
-    ) -> np.ndarray:
+    ) -> IdentifiedRasterizedInformation:
+        print("Fetching data for bpbn")
+        resampling = "bilinear"
         src_crs = CRS.from_epsg(self.EPSG)
         dst_crs = CRS.from_epsg(PLATE_CARREE_EPSG)
 
-        src_extent = reproject_extent(dst_extent, ccrs.PlateCarree(), self.crs)
-        dst_extent = reproject_extent(
-            dst_extent, ccrs.PlateCarree(), ccrs.Projection(dst_crs)
-        )
+        src_extent = dst_extent.reproject(ccrs.PlateCarree(), self.crs)
+        ang_extent = dst_extent
+        dst_extent = dst_extent.reproject(ccrs.PlateCarree(), ccrs.Projection(dst_crs))
 
         # Calculate pixel size (before growing src_extent)
-        dst_psize_lon = (src_extent[1] - src_extent[0]) / dst_resolution[1]
-        dst_psize_lat = (src_extent[3] - src_extent[2]) / dst_resolution[0]
+        dst_psize_lon, dst_psize_lat = src_extent.pixel_size(dst_resolution)
 
         # Grow extent if necessary to match data resolution
-        src_extent = grow_extent(src_extent, self.DATA_RESOLUTION)
+        src_extent = src_extent.grow_extent(self.DATA_RESOLUTION)
 
         # Calculate required source resolution
-        src_resolution_lon = int((src_extent[1] - src_extent[0]) / dst_psize_lon)
-        src_resolution_lat = int((src_extent[3] - src_extent[2]) / dst_psize_lat)
+        src_resolution_lon = int(
+            (src_extent.lon_max - src_extent.lon_min) / dst_psize_lon
+        )
+        src_resolution_lat = int(
+            (src_extent.lat_max - src_extent.lat_min) / dst_psize_lat
+        )
 
         src_img = self._get_data(src_extent, (src_resolution_lat, src_resolution_lon))
         print("Image dimensions:", np.array(src_img).shape)
         # Combine RGB channels as it's a greyscale image
-        src_data = np.sum(src_img, axis=2, dtype=np.float32)
+        # src_data = np.sum(src_img, axis=2, dtype=np.float32)
+        src_data = np.array(src_img, dtype=np.float32)[:, :, 0] / 255
 
         output = reproject_gdal(
             src_data,
@@ -170,11 +155,17 @@ class BnpbSource(Source):
             resampling,
         )
 
-        return output
+        return IdentifiedRasterizedInformation("bpnb", ang_extent, output)
+
+    @property
+    def max_resolution(self):
+        # FIXME: We have to decide if we want to use angular or length resolution
+        return (100, 100)
 
 
 class NOAAGfsSource(Source):
     DATA_RESOLUTION = 0.25
+    IDENTIFIER = "noaa-gfs"
 
     def __init__(self, date, cycle, hours_ahead, dataset):
         self.crs = ccrs.PlateCarree()
@@ -189,7 +180,7 @@ class NOAAGfsSource(Source):
         self.dataset = dataset
 
     def _get_data(self, extent: Extent):
-        lon_min, lon_max, lat_min, lat_max = extent
+        lon_min, lon_max, lat_min, lat_max = extent.as_tuple
 
         url = f"https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs{self.date}/gfs_0p25_{self.cycle}z"
         ds = xr.open_dataset(url, decode_coords="all")
@@ -215,7 +206,7 @@ class NOAAGfsSource(Source):
         # Target domain is a shapely POLYGON object that wraps around the bounds of the domain, basically a "rectangle"
         # Lets just use the range in lat and lon
         # Unfortunately, the cartopy extent is ordered in a different way that the shapely bounds, so we have to re-arrange them as well
-        extent = bounds_to_extent(target_domain.bounds)
+        extent = Extent.from_bounds(target_domain.bounds)
 
         prediction_in_region = self._get_data(extent)
 
@@ -228,12 +219,12 @@ class NOAAGfsSource(Source):
 
         return img, extent, "lower"
 
-    def data_for_domain(
+    def fetch_data(
         self,
         dst_extent: Extent,
         dst_resolution: Resolution,
         resampling: str = "bilinear",
-    ) -> np.ndarray:
+    ) -> IdentifiedRasterizedInformation:
         """
 
         Returns a two dimensional array of shape resolution
@@ -241,22 +232,22 @@ class NOAAGfsSource(Source):
         src_crs = CRS.from_epsg(PLATE_CARREE_EPSG)
         dst_crs = CRS.from_epsg(PLATE_CARREE_EPSG)
 
-        src_extent = reproject_extent(dst_extent, ccrs.PlateCarree(), self.crs)
+        src_extent = dst_extent.reproject(ccrs.PlateCarree(), self.crs)
 
         # Grow extent if necessary to match data resolution
-        src_extent = grow_extent(src_extent, self.DATA_RESOLUTION)
+        src_extent = src_extent.grow_extent(self.DATA_RESOLUTION)
 
         src_data = self._get_data(src_extent)  # get source data
 
         # Reproject extents from angles to meters
-        src_extent = reproject_extent(
-            src_extent,
+        src_extent = src_extent.reproject(
             ccrs.PlateCarree(),
             ccrs.Projection(src_crs),
         )
-        dst_extent = reproject_extent(
-            dst_extent, ccrs.PlateCarree(), ccrs.Projection(dst_crs)
-        )
+        ang_extent = dst_extent
+        dst_extent = dst_extent.reproject(ccrs.PlateCarree(), ccrs.Projection(dst_crs))
+
+        print("x", np.min(src_data.values), np.max(src_data.values))
 
         output = reproject_gdal(
             np.flipud(src_data.values),
@@ -268,7 +259,12 @@ class NOAAGfsSource(Source):
             resampling,
         )
 
-        return output
+        return IdentifiedRasterizedInformation(self.IDENTIFIER, ang_extent, output)
+
+    @property
+    def max_resolution(self):
+        # FIXME: We have to decide if we want to use angular or length resolution
+        return (0.5, 0.5)
 
 
 class BmkgSource(Source):
@@ -313,10 +309,8 @@ class BmkgSource(Source):
         src_crs = CRS.from_epsg(self.EPSG)
         dst_crs = CRS.from_epsg(PLATE_CARREE_EPSG)
 
-        src_extent = reproject_extent(dst_extent, ccrs.PlateCarree(), self.crs)
-        dst_extent = reproject_extent(
-            dst_extent, ccrs.PlateCarree(), ccrs.Projection(dst_crs)
-        )
+        src_extent = dst_extent.reproject(ccrs.PlateCarree(), self.crs)
+        dst_extent = dst_extent.reproject(ccrs.PlateCarree(), ccrs.Projection(dst_crs))
 
         assert resolution[0] <= self.MAX_IMAGE_HEIGHT
         assert resolution[1] <= self.MAX_IMAGE_WIDTH
@@ -344,7 +338,7 @@ class BmkgSource(Source):
 
     def _get_data(self, extent: Extent, resolution: Resolution):
         width, height = resolution
-        lon_min, lon_max, lat_min, lat_max = extent
+        lon_min, lon_max, lat_min, lat_max = extent.as_tuple
         print("Getting rain data")
         base_url = "https://gis.bmkg.go.id/arcgis/services/Peta_Curah_Hujan_dan_Hari_Hujan_/MapServer/WMSServer"
         bbox = f"{lon_min:.6f},{lat_min:.6f},{lon_max:.6f},{lat_max:.6f}"
@@ -380,10 +374,10 @@ class BmkgSource(Source):
 
 class CHIRPSSource(Source):
     DATA_RESOLUTION = 0.05
-    DATA_EXTENT = (-180, 180, -50, 50)
+    DATA_EXTENT = Extent(-180, 180, -50, 50)
     EPSG = 4326
 
-    def __init__(self, date: datetime.date):
+    def __init__(self, date: date):
         self.crs = ccrs.GOOGLE_MERCATOR
         self.date = date
 
@@ -393,12 +387,15 @@ class CHIRPSSource(Source):
             f"https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_daily/tifs/p05/{self.date.year}/chirps-v2.0.{self.date.strftime('%Y.%m.%d')}.tif.gz",
         ).prepare()
 
-        print(req.url)
-
         res = SESSION.send(req)
         if res.status_code != 200:
             print("CHIRPS request failed!")
             print(res.text)
+
+        if res.from_cache:
+            print(f"Cache hit for {req.url}")
+        else:
+            print(f"Cache miss for {req.url}")
 
         decompressed = gzip.open(BytesIO(res.content))
 
@@ -418,12 +415,10 @@ class CHIRPSSource(Source):
         src_crs = CRS.from_epsg(self.EPSG)
         dst_crs = CRS.from_epsg(PLATE_CARREE_EPSG)
 
-        src_extent = reproject_extent(
-            self.DATA_EXTENT, ccrs.PlateCarree(), ccrs.Projection(src_crs)
+        src_extent = self.DATA_EXTENT.reproject(
+            ccrs.PlateCarree(), ccrs.Projection(src_crs)
         )
-        dst_extent = reproject_extent(
-            dst_extent, ccrs.PlateCarree(), ccrs.Projection(dst_crs)
-        )
+        dst_extent = dst_extent.reproject(ccrs.PlateCarree(), ccrs.Projection(dst_crs))
 
         # Grow extent if necessary to match data resolution
         # src_extent = grow_extent(src_extent, self.DATA_RESOLUTION)

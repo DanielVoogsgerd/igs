@@ -1,6 +1,8 @@
-import typing, os
+import typing
+import os
 
-from custom_types import Extent, Resolution
+from custom_types import Resolution
+from interface import Extent
 import numpy as np
 
 from pyproj import CRS
@@ -29,39 +31,6 @@ def get_bbox_xy(x: typing.Tuple[float, float], y: typing.Tuple[float, float]) ->
     return f"{x[0]:.6f},{y[0]:.6f},{x[1]:.6f},{y[1]:.6f}"
 
 
-def bounds_to_extent(bounds):
-    return bounds[0], bounds[2], bounds[1], bounds[3]
-
-
-def extent_to_bounds(extent):
-    return extent[0], extent[2], extent[1], extent[3]
-
-
-def grow_extent(extent: Extent, resolution: float):
-    (lon_min, lon_max, lat_min, lat_max) = extent
-    lat_min = np.floor(lat_min / resolution) * resolution
-    lat_max = np.ceil(lat_max / resolution) * resolution
-
-    lon_min = np.floor(lon_min / resolution) * resolution
-    lon_max = np.ceil(lon_max / resolution) * resolution
-
-    return (lon_min, lon_max, lat_min, lat_max)
-
-
-def reproject_extent(src_extent, src_crs, dst_crs):
-    src_lon_min, src_lon_max, src_lat_min, src_lat_max = src_extent
-
-    dst_lon_min, dst_lat_min = dst_crs.transform_point(
-        src_lon_min, src_lat_min, src_crs
-    )
-
-    dst_lon_max, dst_lat_max = dst_crs.transform_point(
-        src_lon_max, src_lat_max, src_crs
-    )
-
-    return dst_lon_min, dst_lon_max, dst_lat_min, dst_lat_max
-
-
 def reproject_gdal(
     src_data: np.ndarray,
     src_crs: CRS,
@@ -85,10 +54,12 @@ def reproject_gdal(
     src_srs.ImportFromProj4(src_crs.to_proj4())
     src_ds.SetProjection(src_srs.ExportToWkt())
 
-    pixel_width = (src_extent[1] - src_extent[0]) / src_data.shape[1]
-    pixel_height = (src_extent[2] - src_extent[3]) / src_data.shape[0]
+    src_resolution = typing.cast(typing.Tuple[int, int], src_data.shape)
+
+    pixel_width, pixel_height = src_extent.pixel_size(src_resolution)
+
     src_ds.SetGeoTransform(
-        [src_extent[0], pixel_width, 0, src_extent[3], 0, pixel_height]
+        [src_extent.lon_min, pixel_width, 0, src_extent.lat_max, 0, -pixel_height]
     )
 
     dst_proj4_string = dst_crs.to_proj4()
@@ -103,8 +74,8 @@ def reproject_gdal(
         width=dst_resolution[1],
         height=dst_resolution[0],
         resampleAlg=resampling,
-        outputBounds=extent_to_bounds(dst_extent),
-        dstNodata=-9000,
+        outputBounds=dst_extent.bounds,
+        dstNodata=np.nan,
         outputBoundsSRS=dst_srs,
     )
 
@@ -126,6 +97,7 @@ def tile_to_mercator(x_tile: int, y_tile: int, zoom: int):
     lat = atan(sinh(pi * (1 - 2 * y_tile / n))) * 180 / pi
 
     return lon, lat
+
 
 def get_file_path(filename):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)
