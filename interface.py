@@ -270,7 +270,7 @@ class Registry:
             [
                 index_id
                 for notifier in self._notifiers
-                for index_id in notifier.required_indices()
+                for index_id in notifier.required_indices
             ]
         )
         sources = set(
