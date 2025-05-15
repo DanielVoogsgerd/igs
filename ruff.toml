@@ -1,0 +1,3 @@
+[lint]
+# https://docs.astral.sh/ruff/rules/undefined-local-with-import-star-usage/
+ignore = ["F403", "F405"]
