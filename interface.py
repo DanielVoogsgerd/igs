@@ -252,7 +252,10 @@ class Registry:
         self._notifiers.append(notifier)
 
     def run(self, extent: Extent, resolution: Resolution):
-        # TODO: This is basic, replace with job queue.
+        # TODO: Refactor to generic job queue, where we don't distinguish
+        # between sources, indices and notifiers.
+        # TODO: Parallelize the fetching of data and computation of indices.
+
         logger.info("Determining dependencies")
         indices = set(
             [
