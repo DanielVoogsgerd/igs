@@ -92,9 +92,6 @@ class RasterizedInformation:
     extent: Extent
     raster: np.ndarray
 
-    def identify(self, identifier: SourceIdentifier):
-        return IdentifiedRasterizedInformation(identifier, self.extent, self.raster)
-
     def __mul__(self, other):
         # TODO: We could return a subset if the maps overlap but have a different extent
         if isinstance(other, type(self)):
@@ -160,34 +157,11 @@ class RasterizedInformation:
         return gdf
 
 
-@dataclass
-class IdentifiedRasterizedInformation(RasterizedInformation):
-    """A wrapper around RasterizedInformation, but tagged with a identifier.
-
-    This data can be used by notifiers to request certain datasets from a registry
-    """
-
-    identifier: SourceIdentifier
-    extent: Extent
-    raster: np.ndarray
-
-    def __init__(
-        self, identifier: SourceIdentifier, extent: Extent, raster: np.ndarray
-    ):
-        self.identifier = identifier
-        self.extent = extent
-        self.raster = raster
-
-    def identify(self, identifier: SourceIdentifier):
-        print("Warning, reidentifying identified data source")
-        return super().identify(identifier)
-
-
 class Source(ABC):
     @abstractmethod
     def fetch_data(
         self, extent: Extent, resolution: Resolution
-    ) -> IdentifiedRasterizedInformation:
+    ) -> RasterizedInformation:
         pass
 
     @property
@@ -204,7 +178,8 @@ class Source(ABC):
 class HazardIndex(ABC):
     @abstractmethod
     def calculate_index(
-        self, rasters: typing.Dict[SourceIdentifier, IdentifiedRasterizedInformation]
+        self,
+        rasters: typing.Dict[SourceIdentifier, RasterizedInformation],
     ) -> RasterizedInformation:
         pass
 
@@ -222,7 +197,8 @@ class HazardIndex(ABC):
 class Notifier(ABC):
     @abstractmethod
     def notify(
-        self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]
+        self,
+        notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation],
     ):
         pass
 
