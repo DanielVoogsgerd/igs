@@ -21,7 +21,3 @@ class InAWAREHazardIndex(HazardIndex):
     @property
     def required_sources(self) -> typing.List[SourceIdentifier]:
         return ["noaa-gfs-rain-data", "bnpb-inarisk-flood-risk-index"]
-
-    @property
-    def provides(self) -> HazardIndexIdentifier:
-        return self.IDENTIFIER
