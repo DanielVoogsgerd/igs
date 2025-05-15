@@ -160,7 +160,7 @@ class BnpbSource(Source):
     def max_resolution(self):
         # FIXME: We have to decide if we want to use angular or length resolution
         return (100, 100)
-    
+
     @property
     def provides(self):
         return "inarisk-flood-risk-index"
@@ -268,7 +268,7 @@ class NOAAGfsSource(Source):
     def max_resolution(self):
         # FIXME: We have to decide if we want to use angular or length resolution
         return (0.5, 0.5)
-    
+
     @property
     def provides(self):
         return "rain-data-today"
