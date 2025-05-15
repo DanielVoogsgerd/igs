@@ -1,5 +1,6 @@
 #!/usr/env/python
 from datetime import timedelta
+import logging
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -11,6 +12,8 @@ from interface import *
 from sources import *
 from indices import *
 from notifiers import *
+
+logger = logging.getLogger(__name__)
 
 SESSION = requests_cache.CachedSession(
     "demo_cache",
@@ -30,6 +33,10 @@ MAP_PROJECTION = ccrs.PlateCarree()
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(levelname)8s: %(message)s")
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("requests_cache").setLevel(logging.WARNING)
+
     # angular_resolution = 0.01  # pretty, but slow
     angular_resolution = 0.05
 
@@ -39,14 +46,15 @@ def main():
     extent = Extent(*lon, *lat).grow_extent(angular_resolution)
     del lon, lat
 
-    print("Map extent: ", extent)
+    logger.debug(f"Map extent: {extent}")
 
     lon_res = int((extent.lon_max - extent.lon_min) // angular_resolution + 1)
     lat_res = int((extent.lat_max - extent.lat_min) // angular_resolution + 1)
 
     resolution = lat_res, lon_res
-    print("Map resolution", resolution)
+    logger.debug(f"Map resolution: {resolution}")
 
+    logger.info("Setting up registry")
     registry = Registry()
     registry.register_source(NOAAGfsSource("20250513", "00", 12, "apcpsfc"))
     registry.register_source(BnpbInaRiskFloodRiskIndexSource())
@@ -54,7 +62,7 @@ def main():
 
     registry.register_hazard_index(InAWAREHazardIndex())
 
-    registry.register_notifier(PlotNotifier())
+    # registry.register_notifier(PlotNotifier())
     registry.register_notifier(ConsoleAreaNotifier())
 
     registry.run(extent, resolution)

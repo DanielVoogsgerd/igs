@@ -1,6 +1,10 @@
 from sources import *
 from interface import *
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 # TODO: Change to H-MHEWS
 class InAWAREHazardIndex(HazardIndex):

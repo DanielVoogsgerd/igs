@@ -2,6 +2,7 @@ import cartopy.feature as cfeature
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import os
+import logging
 
 
 from interface import *
@@ -9,10 +10,14 @@ from sources import *
 from indices import *
 from areas import map_grid_cells_to_areas
 
+logger = logging.getLogger(__name__)
+
 MAP_PROJECTION = ccrs.PlateCarree()
 
 
 class PlotNotifier(Notifier):
+    IDENTIFIER = "plot-notifier"
+
     def notify(
         self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]
     ):
@@ -44,6 +49,8 @@ class PlotNotifier(Notifier):
 
 
 class ConsoleAreaNotifier(Notifier):
+    IDENTIFIER = "console-area-notifier"
+
     def notify(
         self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]
     ):
@@ -54,14 +61,14 @@ class ConsoleAreaNotifier(Notifier):
         areas_gdf = map_grid_cells_to_areas(raster_gdf_filtered)
 
         if areas_gdf.empty:
-            print("No affected areas found.")
+            logger.info("ConsoleAreaNotifier: No affected areas found.")
             return
 
-        print(f"Affected areas ({len(areas_gdf)}):")
+        logger.info(f"ConsoleAreaNotifier - Affected areas ({len(areas_gdf)}):")
         # Currently printed at gadm level 3.
         sorted_areas = areas_gdf.sort_values(by="NAME_3")
         for row in sorted_areas.itertuples():
-            print(f"- {row.NAME_3}, GID: {row.GID_3}")
+            logger.info(f"- {row.NAME_3}, GID: {row.GID_3}")
 
     @property
     def responsible_extent(self) -> Extent:
