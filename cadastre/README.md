@@ -1,6 +1,6 @@
 ## General
 
-These cadastre files describe the administrative boundaries of regions in Indonesia. The level 2 subdivisions are used. The level 1 subdivisions can be viewed in the browser [here](https://gadm.org/maps/IDN_1.html).
+These cadastre files describe the administrative boundaries of regions in Indonesia. The level 3 subdivisions are used. The level 1 subdivisions can be viewed in the browser [here](https://gadm.org/maps/IDN_1.html).
 
 The project's area of focus Bandung Regency, lies in Indonesia, Java, Jawa Barat (L1; 28; [link](https://gadm.org/maps/IDN/jawabarat_2.html)), and more specifically Bandung regency/kabupaten (L2; 18; [link](https://gadm.org/maps/IDN/jawabarat/bandung.html)).
 
