@@ -4,6 +4,7 @@ import logging
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+from osgeo import gdal
 
 import requests_cache
 import numpy as np
@@ -36,6 +37,8 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)8s: %(message)s")
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("requests_cache").setLevel(logging.WARNING)
+
+    gdal.UseExceptions()
 
     # angular_resolution = 0.01  # pretty, but slow
     angular_resolution = 0.05
