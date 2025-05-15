@@ -222,7 +222,9 @@ class HazardIndex(ABC):
 
 class Notifier(ABC):
     @abstractmethod
-    def notify(self, notify_raster: RasterizedInformation):
+    def notify(
+        self, notify_raster: typing.Dict[HazardIndexIdentifier, RasterizedInformation]
+    ):
         pass
 
     @property
@@ -230,6 +232,7 @@ class Notifier(ABC):
     def responsible_extent(self) -> Extent:
         pass
 
+    # TODO: Add support for generic index or passed in the constructor.
     @property
     @abstractmethod
     def required_indices(self) -> typing.List[HazardIndexIdentifier]:
@@ -261,10 +264,37 @@ class Registry:
     def register_notifier(self, notifier: Notifier):
         self._notifiers.append(notifier)
 
-    def run(self):
-        # TODO:
-        # - Find notifiers
-        # - Find required hazard indices
-        # - Find required sources
-        # - Resolve dependency chain
-        pass
+    def run(self, extent: Extent, resolution: Resolution):
+        # TODO: This is basic, replace with job queue.
+        indices = set(
+            [
+                index_id
+                for notifier in self._notifiers
+                for index_id in notifier.required_indices()
+            ]
+        )
+        sources = set(
+            [
+                source_id
+                for index in indices
+                for source_id in self._hazard_indices[index].required_sources
+            ]
+        )
+        print(f"Notifiers: {self._notifiers}")
+        print(f"Hazard indices in use: {indices}")
+        print(f"Sources in use: {sources}")
+
+        source_res = {
+            source_id: self._sources[source_id].fetch_data(extent, resolution)
+            for source_id in sources
+        }
+
+        index_res = {
+            index_identifier: self._hazard_indices[index_identifier].calculate_index(
+                source_res
+            )
+            for index_identifier in indices
+        }
+
+        for notifier in self._notifiers:
+            notifier.notify(index_res)
