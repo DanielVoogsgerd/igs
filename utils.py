@@ -53,7 +53,8 @@ def reproject_gdal(
     src_srs.ImportFromProj4(src_crs.to_proj4())
     src_ds.SetProjection(src_srs.ExportToWkt())
 
-    src_resolution = typing.cast(typing.Tuple[int, int], src_data.shape)
+    xn, yn = src_data.shape
+    src_resolution = Resolution(lon=yn, lat=xn)
 
     pixel_width, pixel_height = src_extent.pixel_size(src_resolution)
 
@@ -70,8 +71,8 @@ def reproject_gdal(
         src_ds,  # source dataset
         format="MEM",
         dstSRS=dst_srs,
-        width=dst_resolution[1],
-        height=dst_resolution[0],
+        width=dst_resolution.lon,
+        height=dst_resolution.lat,
         resampleAlg=resampling,
         outputBounds=dst_extent.bounds,
         dstNodata=np.nan,
