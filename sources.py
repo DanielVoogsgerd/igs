@@ -191,6 +191,7 @@ class NOAAGfsSource(Source):
         self.date = date
         # 4 cycles are published every day (one every six hours),
         # must be '00', '06', '12', or '18'
+        assert cycle in ["00", "06", "12", "18"]
         self.cycle = cycle
         # The data is accumulated (summed) precipitation over X hours, indicate
         # here how many hours ahead you want to look (gets rounded down to 3h intervals)
