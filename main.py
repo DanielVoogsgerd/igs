@@ -68,6 +68,7 @@ def main():
 
     registry.register_notifier(PlotNotifier())
     registry.register_notifier(ConsoleAreaNotifier())
+    registry.register_notifier(ConsoleGridNotifier())
 
     registry.run(extent, resolution)
 
