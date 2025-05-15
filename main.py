@@ -10,8 +10,9 @@ import os
 import requests_cache
 import numpy as np
 
-from sources import *
 from interface import *
+from sources import *
+from indices import *
 from areas import map_grid_cells_to_areas
 
 SESSION = requests_cache.CachedSession(
@@ -61,25 +62,6 @@ def main():
     registry.run(extent, resolution)
 
     plt.show()
-
-
-# TODO: Change to H-MHEWS
-class InAWAREHazardIndex(HazardIndex):
-    def calculate_index(
-        self, rasters: typing.Dict[SourceIdentifier, IdentifiedRasterizedInformation]
-    ) -> RasterizedInformation:
-        return (
-            rasters["inarisk-flood-risk-index"] * 0.2 * 20
-            + rasters["rain-data-today"] * 0.8
-        )
-
-    @property
-    def required_sources(self) -> typing.List[SourceIdentifier]:
-        return ["rain-data-today", "inarisk-flood-risk-index"]
-
-    @property
-    def provides(self) -> HazardIndexIdentifier:
-        return "inaware-flood-risk-index"
 
 
 class PlotNotifier(Notifier):
