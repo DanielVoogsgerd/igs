@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c477d1b3-30be-4939-a716-adc42b4370ea" name="Changes" comment="" />
+    <list default="true" id="c477d1b3-30be-4939-a716-adc42b4370ea" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -38,7 +41,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "daniel",
+    "git-widget-placeholder": "headless-message",
     "last_opened_file_path": "/Users/hiddemakimei/Desktop/git/vu/IGS/igs",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -198,7 +201,7 @@
       <workItem from="1746114205432" duration="8276000" />
       <workItem from="1746534020506" duration="24000" />
       <workItem from="1747207920085" duration="9216000" />
-      <workItem from="1747304826238" duration="1348000" />
+      <workItem from="1747304826238" duration="2343000" />
     </task>
     <servers />
   </component>

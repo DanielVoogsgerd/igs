@@ -13,6 +13,11 @@ cartopy
 scipy
 osmnx
 xarray
+flask
+pywhatkit
+selenium
+pyautogui
+uuid
 
 PyQt6
 tqdm
