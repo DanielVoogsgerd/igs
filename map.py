@@ -16,6 +16,10 @@ import numpy as np
 from sources import *
 from utils import grow_extent
 
+from areas import array_to_gdf, get_affected_areas
+from notification import ConsoleNotificationBackend
+
+
 SESSION = requests_cache.CachedSession(
     "demo_cache",
     use_cache_dir=True,  # Save files in the default user cache dir
@@ -33,9 +37,8 @@ PLATE_CARREE_EPSG = 32662
 
 
 def main():
-    # angular_resolution = 0.01  # pretty, but slow
-    angular_resolution = 0.05
-
+    angular_resolution = 0.05  # pretty, but slow
+    # angular_resolution = 0.05
     lat = np.array([-10.00, -4.75])
     lon = np.array([104.50, 120])
 
@@ -70,7 +73,7 @@ def main():
     bandung.geometry.boundary.plot(ax=ax)
 
     # NOTE: -- PRECIPITATION (prediction)
-    precipitation_factory = NOAAGfsSource("20250429", "00", 12, "apcpsfc")
+    precipitation_factory = NOAAGfsSource("20250515", "00", 12, "apcpsfc")
     data = precipitation_factory.data_for_domain(extent, resolution)
     ax.imshow(
         data,
@@ -122,6 +125,17 @@ def main():
     plot_map_cartopy((extent[2], extent[3]), (extent[0], extent[1]))
 
     plt.show()
+
+    gdf = array_to_gdf(data, extent)
+
+    threshold = 32
+    gdf_filtered = gdf[gdf["value"] > threshold]
+    # gdf_filtered.to_file(f"points/points_gt_{threshold}.shp")
+
+    affected_areas = get_affected_areas(gdf_filtered)
+    # affected_areas.to_file("points/points_affected-IDN3-Java-005.shp")
+
+    ConsoleNotificationBackend().notify(affected_areas)
 
 
 def plot_map(lat, lon):
