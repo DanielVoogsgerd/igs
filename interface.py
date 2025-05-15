@@ -158,7 +158,19 @@ class RasterizedInformation:
         return gdf
 
 
-class Source(ABC):
+class Identifiable(ABC):
+    """A class that has an `IDENTIFIER` attribute."""
+
+    IDENTIFIER = "unset"
+
+    def __str__(self):
+        return f"{self.IDENTIFIER}"
+
+    def __repr__(self):
+        return f"{self.IDENTIFIER}"
+
+
+class Source(Identifiable):
     @abstractmethod
     def fetch_data(
         self, extent: Extent, resolution: Resolution
@@ -176,7 +188,7 @@ class Source(ABC):
         pass
 
 
-class HazardIndex(ABC):
+class HazardIndex(Identifiable):
     @abstractmethod
     def calculate_index(
         self,
@@ -195,7 +207,7 @@ class HazardIndex(ABC):
         pass
 
 
-class Notifier(ABC):
+class Notifier(Identifiable):
     @abstractmethod
     def notify(
         self,
