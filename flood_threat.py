@@ -18,20 +18,7 @@ def is_flood_threat(flood_hazard_index):
     return flood_hazard_index >= FLOOD_THREAT_THRESHOLD
 
 def alert_on_flood_threat(flood_hazard_index, group_id=None, phone_number=None, should_notify=True):
-    """
-    Checks for flood threat and sends alert if threshold is exceeded
-    
-    Args:
-        flood_hazard_index (float): The flood hazard index value
-        group_id (str, optional): WhatsApp group ID to send the alert to
-        phone_number (str, optional): Phone number with country code
-        should_notify (bool): Whether to send WhatsApp notifications
-        
-    Returns:
-        tuple: (is_threat, alert_status)
-            - is_threat (bool): Whether there is a flood threat
-            - alert_status (dict or None): Status of alert sending or None if no alert was sent
-    """
+
     is_threat = is_flood_threat(flood_hazard_index)
     alert_status = None
     
