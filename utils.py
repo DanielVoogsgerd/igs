@@ -1,10 +1,9 @@
 import typing
 import os
 
-from custom_types import Resolution
-from interface import Extent
 import numpy as np
 
+from interface import Resolution, Extent
 from pyproj import CRS
 from osgeo import gdal, osr
 import cartopy.crs as ccrs
