@@ -6,6 +6,9 @@ from shapely.geometry import Polygon
 import numpy as np
 
 import typing
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Extent = typing.Tuple[int, int, int, int]
 Bounds = typing.Tuple[float, float, float, float]
@@ -95,7 +98,6 @@ class RasterizedInformation:
     def __mul__(self, other):
         # TODO: We could return a subset if the maps overlap but have a different extent
         if isinstance(other, type(self)):
-            print("Comparing apples to apples")
             if self.extent != other.extent:
                 raise Exception("Rasters do not line up")
 
@@ -111,7 +113,6 @@ class RasterizedInformation:
     def __add__(self, other):
         # TODO: We could return a subset if the maps overlap but have a different extent
         if isinstance(other, type(self)):
-            print("Comparing apples to apples")
             if self.extent != other.extent:
                 raise Exception("Rasters do not line up")
 
@@ -124,7 +125,7 @@ class RasterizedInformation:
 
     def plot(self, ax, **kwargs):
         kwargs["extent"] = self.extent.as_tuple
-        print(ax, kwargs)
+        logger.debug(f"plot: {ax}, {kwargs}")
         ax.imshow(self.raster, **kwargs)
 
     # TODO: Confirm why this CRS is being used.
@@ -241,6 +242,7 @@ class Registry:
 
     def run(self, extent: Extent, resolution: Resolution):
         # TODO: This is basic, replace with job queue.
+        logger.info("Determining dependencies")
         indices = set(
             [
                 index_id
@@ -255,15 +257,17 @@ class Registry:
                 for source_id in self._hazard_indices[index].required_sources
             ]
         )
-        print(f"Notifiers: {self._notifiers}")
-        print(f"Hazard indices in use: {indices}")
-        print(f"Sources in use: {sources}")
+        logger.debug(f"Notifiers: {self._notifiers}")
+        logger.debug(f"Hazard indices in use: {indices}")
+        logger.debug(f"Sources in use: {sources}")
 
+        logger.info("Fetching data")
         source_res = {
             source_id: self._sources[source_id].fetch_data(extent, resolution)
             for source_id in sources
         }
 
+        logger.info("Calculating indices")
         index_res = {
             index_identifier: self._hazard_indices[index_identifier].calculate_index(
                 source_res
@@ -271,5 +275,6 @@ class Registry:
             for index_identifier in indices
         }
 
+        logger.info("Running notifiers")
         for notifier in self._notifiers:
             notifier.notify(index_res)
