@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+import geopandas as gpd
+from shapely.geometry import Polygon
 import numpy as np
 
 import typing
@@ -107,6 +109,8 @@ class RasterizedInformation:
 
         return RasterizedInformation(self.extent, self.raster * other)
 
+    __rmul__ = __mul__
+
     def __add__(self, other):
         # TODO: We could return a subset if the maps overlap but have a different extent
         if isinstance(other, type(self)):
@@ -126,7 +130,35 @@ class RasterizedInformation:
         print(ax, kwargs)
         ax.imshow(self.raster, **kwargs)
 
-    __rmul__ = __mul__
+    # TODO: Confirm why this CRS is being used.
+    def to_gdf(self, crs="EPSG:4326") -> gpd.GeoDataFrame:
+        """Converts the raster into a GeoDataFrame of polygons.
+
+        Raster array values are stored in the "value" column.
+        The polygons are stored in the "geometry" column.
+        """
+        yn, xn = self.raster.shape
+        pixel_width = (self.extent.lon_max - self.extent.lon_min) / xn
+        pixel_height = (self.extent.lat_max - self.extent.lat_min) / yn
+        assert pixel_width > 0
+        assert pixel_height > 0
+
+        polygons, values = [], []
+
+        for y in range(yn):
+            for x in range(xn):
+                x0 = self.extent.lon_min + x * pixel_width
+                y0 = self.extent.lat_max - (y + 1) * pixel_height
+                x1 = x0 + pixel_width
+                y1 = y0 + pixel_height
+                polygons.append(
+                    Polygon([(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)])
+                )
+                values.append(self.raster[y, x])
+
+        # TODO: Extract column names to constants.
+        gdf = gpd.GeoDataFrame({"value": values, "geometry": polygons}, crs=crs)
+        return gdf
 
 
 @dataclass
