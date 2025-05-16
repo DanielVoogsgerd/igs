@@ -23,7 +23,7 @@ class PlotNotifier(Notifier):
     ):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection=MAP_PROJECTION)
-        ax.set_extent(notify_raster["inaware-flood-risk-index"].extent.as_tuple)
+        ax.set_extent(notify_raster["h-mhews-flood-risk-index"].extent.as_tuple)
 
         gdf = gpd.read_file(
             os.path.join(
@@ -35,7 +35,7 @@ class PlotNotifier(Notifier):
         bandung = gdf[(gdf["NAME_2"] == "Bandung") & (gdf["TYPE_2"] == "Kabupaten")]
         bandung.geometry.boundary.plot(ax=ax)
 
-        notify_raster["inaware-flood-risk-index"].plot(ax, cmap="Reds")
+        notify_raster["h-mhews-flood-risk-index"].plot(ax, cmap="Reds")
         ax.add_feature(cfeature.COASTLINE)
         ax.add_feature(cfeature.STATES)
 
@@ -45,7 +45,7 @@ class PlotNotifier(Notifier):
 
     @property
     def required_indices(self) -> typing.List[HazardIndexIdentifier]:
-        return ["inaware-flood-risk-index"]
+        return ["h-mhews-flood-risk-index"]
 
 
 class ConsoleGridNotifier(Notifier):
@@ -56,7 +56,7 @@ class ConsoleGridNotifier(Notifier):
     ):
         THRESHOLD_VALUE = 32
 
-        raster_gdf = notify_raster["inaware-flood-risk-index"].to_gdf()
+        raster_gdf = notify_raster["h-mhews-flood-risk-index"].to_gdf()
         raster_gdf_filtered = raster_gdf[raster_gdf["value"] >= THRESHOLD_VALUE]
 
         if raster_gdf_filtered.empty:
@@ -82,7 +82,7 @@ class ConsoleGridNotifier(Notifier):
 
     @property
     def required_indices(self) -> typing.List[HazardIndexIdentifier]:
-        return ["inaware-flood-risk-index"]
+        return ["h-mhews-flood-risk-index"]
 
 
 class ConsoleAreaNotifier(Notifier):
@@ -93,7 +93,7 @@ class ConsoleAreaNotifier(Notifier):
     ):
         THRESHOLD_VALUE = 32
 
-        raster_gdf = notify_raster["inaware-flood-risk-index"].to_gdf()
+        raster_gdf = notify_raster["h-mhews-flood-risk-index"].to_gdf()
         raster_gdf_filtered = raster_gdf[raster_gdf["value"] >= THRESHOLD_VALUE]
         areas_gdf = map_grid_cells_to_areas(raster_gdf_filtered)
 
@@ -113,4 +113,4 @@ class ConsoleAreaNotifier(Notifier):
 
     @property
     def required_indices(self) -> typing.List[HazardIndexIdentifier]:
-        return ["inaware-flood-risk-index"]
+        return ["h-mhews-flood-risk-index"]

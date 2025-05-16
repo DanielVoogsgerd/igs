@@ -64,7 +64,7 @@ def main():
     registry.register_source(BnpbInaRiskFloodRiskIndexSource())
     registry.register_source(BnpbInaRiskFlashFloodRiskIndexSource())
 
-    registry.register_hazard_index(InAWAREHazardIndex())
+    registry.register_hazard_index(HMHEWSFloodHazardIndex())
 
     registry.register_notifier(PlotNotifier())
     registry.register_notifier(ConsoleAreaNotifier())
