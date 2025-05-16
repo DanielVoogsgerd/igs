@@ -62,6 +62,13 @@ class Extent:
 
         return Extent(lon_min, lon_max, lat_min, lat_max)
 
+    # TODO: Rename `lon_res` and `lat_res`.
+    def lon_res(self, angular_resolution: float) -> int:
+        return int((self.lon_max - self.lon_min) // angular_resolution + 1)
+
+    def lat_res(self, angular_resolution: float) -> int:
+        return int((self.lat_max - self.lat_min) // angular_resolution + 1)
+
     def reproject(self, src_crs, dst_crs) -> "Extent":
         dst_lon_min, dst_lat_min = dst_crs.transform_point(
             self.lon_min, self.lat_min, src_crs
