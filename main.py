@@ -52,10 +52,9 @@ def main():
 
     logger.debug(f"Map extent: {extent}")
 
-    lon_res = int((extent.lon_max - extent.lon_min) // angular_resolution + 1)
-    lat_res = int((extent.lat_max - extent.lat_min) // angular_resolution + 1)
-
-    resolution = Resolution(lon=lon_res, lat=lat_res)
+    resolution = Resolution(
+        lon=extent.lon_res(angular_resolution), lat=extent.lat_res(angular_resolution)
+    )
     logger.debug(f"Map resolution: {resolution}")
 
     logger.info("Setting up registry")
