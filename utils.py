@@ -1,5 +1,6 @@
 import typing
 import os
+from datetime import datetime, timedelta
 
 import numpy as np
 
@@ -99,3 +100,19 @@ def tile_to_mercator(x_tile: int, y_tile: int, zoom: int):
 
 def get_file_path(filename):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)
+
+
+def get_date_range(
+    start_date: datetime, end_date_inclusive: datetime
+) -> list[datetime]:
+    return [
+        start_date + timedelta(days=x)
+        for x in range((end_date_inclusive - start_date).days + 1)
+    ]
+
+
+class DateRange:
+    def __init__(self, start_date: datetime, end_date_inclusive: datetime):
+        self.start_date = start_date
+        self.end_date_inclusive = end_date_inclusive
+        self.date_range = get_date_range(start_date, end_date_inclusive)
