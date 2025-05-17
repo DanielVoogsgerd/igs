@@ -1,5 +1,6 @@
 import typing
 import os
+from datetime import datetime, timedelta
 
 import numpy as np
 
@@ -48,9 +49,8 @@ def reproject_gdal(
     src_ds.GetRasterBand(1).WriteArray(src_data)
 
     # Define spatial reference and geo-transform
-
     src_srs = osr.SpatialReference()
-    src_srs.ImportFromProj4(src_crs.to_proj4())
+    src_srs.ImportFromEPSG(src_crs.to_epsg())
     src_ds.SetProjection(src_srs.ExportToWkt())
 
     xn, yn = src_data.shape
@@ -62,9 +62,8 @@ def reproject_gdal(
         [src_extent.lon_min, pixel_width, 0, src_extent.lat_max, 0, -pixel_height]
     )
 
-    dst_proj4_string = dst_crs.to_proj4()
     dst_srs = osr.SpatialReference()
-    dst_srs.ImportFromProj4(dst_proj4_string)
+    dst_srs.ImportFromEPSG(dst_crs.to_epsg())
 
     warped_ds = gdal.Warp(
         "",  # in-memory output
@@ -101,3 +100,19 @@ def tile_to_mercator(x_tile: int, y_tile: int, zoom: int):
 
 def get_file_path(filename):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)
+
+
+def get_date_range(
+    start_date: datetime, end_date_inclusive: datetime
+) -> list[datetime]:
+    return [
+        start_date + timedelta(days=x)
+        for x in range((end_date_inclusive - start_date).days + 1)
+    ]
+
+
+class DateRange:
+    def __init__(self, start_date: datetime, end_date_inclusive: datetime):
+        self.start_date = start_date
+        self.end_date_inclusive = end_date_inclusive
+        self.date_range = get_date_range(start_date, end_date_inclusive)
