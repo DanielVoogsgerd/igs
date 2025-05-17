@@ -31,3 +31,26 @@ class HMHEWSFloodHazardIndex(HazardIndex):
     @property
     def required_sources(self) -> typing.List[SourceIdentifier]:
         return ["noaa-gfs-rain-data", "bnpb-inarisk-flood-risk-index"]
+
+
+class HMHEWSHistoricalFloodHazardIndex(HazardIndex):
+    """A flood risk hazard index. Based on the H-MHEWS system. Uses CHIRPS
+    historical rain data instead of NOAA GFS predicted rain data.
+
+    Used for backtesting. For more details, see the HMHEWSFloodHazardIndex
+    class.
+    """
+
+    IDENTIFIER = "h-mhews-historical-flood-risk-index"
+
+    def calculate_index(
+        self, rasters: typing.Dict[SourceIdentifier, RasterizedInformation]
+    ) -> RasterizedInformation:
+        return (
+            rasters["bnpb-inarisk-flood-risk-index"] * 0.2 * 20
+            + rasters["chirps-historical-rain-data"] * 0.8 * 0.125
+        )
+
+    @property
+    def required_sources(self) -> typing.List[SourceIdentifier]:
+        return ["chirps-historical-rain-data", "bnpb-inarisk-flood-risk-index"]
