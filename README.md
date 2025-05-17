@@ -9,3 +9,7 @@
 - `uv run main.py`
 
 - Run `uv run main.py --help` to list the available arguments (e.g., `logLevel`).
+
+## Backtesting
+- Configure by editing `backtest-v2.py`.
+- Run `uv run backtest-v2.py` or `uv run backtest-v2.py -l DEBUG`
