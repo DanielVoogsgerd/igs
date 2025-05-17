@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "basemap>=1.4.1",
+    "beautifulsoup4>=4.13.4",
     "cartopy>=0.24.1",
     "gdal<3.10.0",
     "geopandas>=1.0.1",
