@@ -48,9 +48,8 @@ def reproject_gdal(
     src_ds.GetRasterBand(1).WriteArray(src_data)
 
     # Define spatial reference and geo-transform
-
     src_srs = osr.SpatialReference()
-    src_srs.ImportFromProj4(src_crs.to_proj4())
+    src_srs.ImportFromEPSG(src_crs.to_epsg())
     src_ds.SetProjection(src_srs.ExportToWkt())
 
     xn, yn = src_data.shape
@@ -62,9 +61,8 @@ def reproject_gdal(
         [src_extent.lon_min, pixel_width, 0, src_extent.lat_max, 0, -pixel_height]
     )
 
-    dst_proj4_string = dst_crs.to_proj4()
     dst_srs = osr.SpatialReference()
-    dst_srs.ImportFromProj4(dst_proj4_string)
+    dst_srs.ImportFromEPSG(dst_crs.to_epsg())
 
     warped_ds = gdal.Warp(
         "",  # in-memory output
