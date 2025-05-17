@@ -284,7 +284,6 @@ class NOAAGfsSource(Source):
         return (0.5, 0.5)
 
 
-# TODO: Complete this source
 class BmkgSource(Source):
     IDENTIFIER = "bmkg-rain-data"
 
@@ -358,6 +357,19 @@ class BmkgSource(Source):
 
         return output
 
+    def fetch_data(
+        self,
+        extent: Extent,
+        resolution: Resolution,
+    ) -> RasterizedInformation:
+        return RasterizedInformation(extent, self.data_for_domain(extent, resolution))
+
+    # TODO: Verify correctness.
+    @property
+    def max_resolution(self):
+        # FIXME: We have to decide if we want to use angular or length resolution
+        return (100, 100)
+
     def _get_data(self, extent: Extent, resolution: Resolution):
         width, height = resolution
         lon_min, lon_max, lat_min, lat_max = extent.as_tuple
@@ -393,7 +405,6 @@ class BmkgSource(Source):
         return i
 
 
-# TODO: Complete this source
 class CHIRPSSource(Source):
     IDENTIFIER = "chirps-historical-rain-data"
 
@@ -465,3 +476,16 @@ class CHIRPSSource(Source):
         )
 
         return output
+
+    def fetch_data(
+        self,
+        extent: Extent,
+        resolution: Resolution,
+    ) -> RasterizedInformation:
+        return RasterizedInformation(extent, self.data_for_domain(extent, resolution))
+
+    # TODO: Verify correctness.
+    @property
+    def max_resolution(self):
+        # FIXME: We have to decide if we want to use angular or length resolution
+        return (100, 100)
