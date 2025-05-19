@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="c477d1b3-30be-4939-a716-adc42b4370ea" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,32 +30,32 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.flood_threat.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.map.executor": "Run",
-    "Python.request.executor": "Run",
-    "Python.streamlit_app.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "headless-message",
-    "last_opened_file_path": "/Users/hiddemakimei/Desktop/git/vu/IGS/igs",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.flood_threat.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.map.executor&quot;: &quot;Run&quot;,
+    &quot;Python.request.executor&quot;: &quot;Run&quot;,
+    &quot;Python.streamlit_app.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;headless-message&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/hiddemakimei/Desktop/git/vu/IGS/igs&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunAnythingCache">
     <option name="myCommands">
       <command value="pip install -r requirements.txt" />
     </option>
   </component>
-  <component name="RunManager" selected="Python.igs">
+  <component name="RunManager" selected="Flask server.igs">
     <configuration name="flood_threat" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -174,6 +173,22 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="igs" type="Python.FlaskServer">
+      <module name="igs" />
+      <option name="target" value="$PROJECT_DIR$/whatsapp_messaging_api.py" />
+      <option name="targetType" value="PATH" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="launchJavascriptDebuger" value="false" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Python.flood_threat" />
@@ -201,7 +216,8 @@
       <workItem from="1746114205432" duration="8276000" />
       <workItem from="1746534020506" duration="24000" />
       <workItem from="1747207920085" duration="9216000" />
-      <workItem from="1747304826238" duration="2343000" />
+      <workItem from="1747304826238" duration="6824000" />
+      <workItem from="1747382970209" duration="1134000" />
     </task>
     <servers />
   </component>
