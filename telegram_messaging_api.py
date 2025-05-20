@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Global variable to store the bot token
-BOT_TOKEN = '7321657537:AAFHC6gnR67fx8bU0SjitGNQIBd9t5fQ6Hw'
+BOT_TOKEN = 'place token here'
 
 def setup_telegram_config(token):
 
