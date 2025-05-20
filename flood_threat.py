@@ -48,27 +48,24 @@ def is_flood_threat(flood_hazard_index):
     return flood_hazard_index >= FLOOD_THREAT_THRESHOLD
 
 def get_affected_regions(raster_data=None):
-    """Get the affected regions from raster data
-    
-    If no raster data is provided, returns a default message.
-    """
+
     if raster_data is None:
         return "Unknown regions"
     
     try:
-        # Import spatial libraries only when needed
+
         gpd, np, map_grid_cells_to_areas = import_spatial_libraries()
         
         # Convert raster data to GeoDataFrame
         raster_gdf = raster_data.to_gdf()
-        # Filter for values above threshold
+
         THRESHOLD_VALUE = 32
         raster_gdf_filtered = raster_gdf[raster_gdf["value"] >= THRESHOLD_VALUE]
         
         if raster_gdf_filtered.empty:
             return "No specific regions affected"
         
-        # Map grid cells to administrative areas
+
         affected_areas = map_grid_cells_to_areas(raster_gdf_filtered)
         
         if affected_areas.empty:
@@ -84,16 +81,7 @@ def get_affected_regions(raster_data=None):
         return "Unable to determine affected regions"
 
 def translate_message(message, lang='en'):
-    """
-    Translate a message to the specified language.
-    
-    Args:
-        message (str): The message to translate
-        lang (str): The language code ('en' for English, 'id' for Indonesian)
-        
-    Returns:
-        str: The translated message
-    """
+
     if lang == 'en' or not message:
         return message
         
@@ -110,7 +98,7 @@ def translate_message(message, lang='en'):
                 return INDONESIAN_TRANSLATIONS[message]
             return translated
         except FileNotFoundError:
-            # If no translation files found, use our fallback dictionary
+
             if message in INDONESIAN_TRANSLATIONS:
                 return INDONESIAN_TRANSLATIONS[message]
             
@@ -125,15 +113,7 @@ def translate_message(message, lang='en'):
 
 
 def get_message_template(lang='en'):
-    """
-    Get message templates in the specified language.
-    
-    Args:
-        lang (str): The language code ('en' for English, 'id' for Indonesian)
-        
-    Returns:
-        dict: Message templates in the specified language
-    """
+
     templates = {
         'alert_title': translate_message("FLOOD ALERT!", lang),
         'threat_detected': translate_message("Imminent flood threat detected with hazard index of", lang),
@@ -146,17 +126,7 @@ def get_message_template(lang='en'):
 
 
 def format_alert_message(flood_hazard_index, affected_regions=None, lang='en'):
-    """
-    Format an alert message in the specified language.
-    
-    Args:
-        flood_hazard_index (float): The hazard index value
-        affected_regions (str, optional): String of affected region names
-        lang (str): The language code ('en' for English, 'id' for Indonesian)
-        
-    Returns:
-        str: Formatted alert message in the specified language
-    """
+
     templates = get_message_template(lang)
     
     # Create the message
@@ -179,25 +149,7 @@ def format_alert_message(flood_hazard_index, affected_regions=None, lang='en'):
 def alert_on_flood_threat(flood_hazard_index, whatsapp_group_id=None, whatsapp_phone_number=None, telegram_chat_id=None, 
                       should_notify=True, raster_data=None, use_whatsapp=True, use_telegram=True, 
                       use_whatsapp_fallback_only=False, language='en'):
-    """
-    Send flood threat alerts based on the hazard index.
-    
-    Args:
-        flood_hazard_index (float): The hazard index value (0-1)
-        whatsapp_group_id (str, optional): WhatsApp group ID to send the alert to
-        whatsapp_phone_number (str, optional): WhatsApp phone number to send the alert to
-        telegram_chat_id (str, optional): Telegram chat ID to send the alert to
-        should_notify (bool): Whether notifications should be sent at all
-        raster_data: Raster data containing flood information for region detection
-        use_whatsapp (bool): Whether to use WhatsApp notifications
-        use_telegram (bool): Whether to use Telegram notifications
-        use_whatsapp_fallback_only (bool): If True, only use the fallback (pywhatkit) method for WhatsApp
-        
-    Returns:
-        tuple: (is_threat, alert_statuses)
-            is_threat (bool): Whether a flood threat was detected
-            alert_statuses (dict): Status information for each messaging platform
-    """
+
     is_threat = is_flood_threat(flood_hazard_index)
     whatsapp_alert_status = None
     telegram_alert_status = None
@@ -220,10 +172,8 @@ def alert_on_flood_threat(flood_hazard_index, whatsapp_group_id=None, whatsapp_p
                 logger.info(f"Sending WhatsApp alert for flood threat with index: {flood_hazard_index} in regions: {affected_regions}")
                 
                 if use_whatsapp_fallback_only:
-                    # Import directly here to avoid circular imports
                     from whatsapp_messaging_api import send_whatsapp_message_pywhatkit
-                    
-                    # Add warning message in the specified language
+
                     templates = get_message_template(language)
                     warning_message = templates['warning_message'] + "\n"
                     instruction_message = templates['instruction_message'] + "\n\n"
@@ -231,7 +181,7 @@ def alert_on_flood_threat(flood_hazard_index, whatsapp_group_id=None, whatsapp_p
                     
                     whatsapp_alert_status = send_whatsapp_message_pywhatkit(whatsapp_phone_number, full_message, whatsapp_group_id)
                 else:
-                    # Use the regular method which tries headless first, then fallback
+
                     whatsapp_alert_status = send_whatsapp_alert(flood_hazard_index, whatsapp_group_id, whatsapp_phone_number, affected_regions, language)
                 
                 if whatsapp_alert_status["status"] == "success":
@@ -239,7 +189,7 @@ def alert_on_flood_threat(flood_hazard_index, whatsapp_group_id=None, whatsapp_p
                 else:
                     logger.error(f"Failed to send WhatsApp alert: {whatsapp_alert_status['message']}")
             
-            # Send Telegram alert if enabled and recipient specified
+
             if use_telegram and telegram_chat_id:
                 logger.info(f"Sending Telegram alert for flood threat with index: {flood_hazard_index} in regions: {affected_regions}")
                 telegram_alert_status = send_telegram_alert(flood_hazard_index, telegram_chat_id, affected_regions, language)
@@ -280,8 +230,8 @@ if __name__ == "__main__":
     # Set your WhatsApp group ID or phone number here
     # Example group_id: "AbCdEfGhIjKlMnOp"
     # Example phone_number: "+1234567890" (with country code)
-    whatsapp_group_id = 'FAXzTqYTt4zF2h6OuVeUck'  # Replace with your WhatsApp group ID
-    whatsapp_phone_number = '+3139336782'  # Replace with your WhatsApp phone number
+    whatsapp_group_id = ''  # Replace with your WhatsApp group ID
+    whatsapp_phone_number = ''  # Replace with your WhatsApp phone number
     
     # Set your Telegram channel or chat ID
     telegram_chat_id = '@fewsbandungML'  # The Telegram channel provided
