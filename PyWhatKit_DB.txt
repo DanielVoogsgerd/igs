@@ -48,3 +48,8 @@ Time: 12:42
 Group ID: FAXzTqYTt4zF2h6OuVeUck
 Message: FLOOD ALERT!Imminent flood threat detected with hazard index of 0.95.Please take necessary precautions immediately.
 --------------------
+Date: 20/5/2025
+Time: 1:58
+Group ID: FAXzTqYTt4zF2h6OuVeUck
+Message: ⚠️ PLEASE DO NOT TOUCH YOUR COMPUTER WHILE THIS MESSAGE IS BEING SENT ⚠️You must scan the QR code when WhatsApp Web opens.MOHON JANGAN SENTUH KOMPUTER ANDA SELAMA PESAN INI SEDANG DIKIRIMAnda harus memindai kode QR ketika WhatsApp Web terbuka.PERINGATAN BANJIR!Ancaman banjir terdeteksi dengan indeks bahaya 0.80.Wilayah yang terkena dampak: Bandung, CianjurHarap segera mengambil tindakan pencegahan yang diperlukan.
+--------------------

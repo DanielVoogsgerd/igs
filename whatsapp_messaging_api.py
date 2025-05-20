@@ -4,166 +4,233 @@ import time
 import datetime
 import logging
 import sys
+import os
+import webbrowser
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-# Set default encoding to utf-8
-sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+# Public exports
+__all__ = ['send_flood_alert', 'send_whatsapp_message']
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Set default encoding to utf-8
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
+# Flask app
 app = Flask(__name__)
 
-def setup_whatsapp_config(wait_time=15, close_tab=True):
+# Global settings
+PROFILE_DIR = "./whatsapp_persistent_profile"
+HAS_AUTHENTICATED = False
+WAIT_TIME = 30
 
-    # PyWhatKit updated its API - different ways to set config depending on version
-    try:
-        # Try new API style first
-        pywhatkit.config.wait_time = wait_time
-        pywhatkit.config.close_tab = close_tab
-    except AttributeError:
-        try:
-            # Try old API style
-            pywhatkit.settings.wait_time = wait_time
-            pywhatkit.settings.close_tab = close_tab
-        except AttributeError:
-            # If both fail, log the issue but continue
-            logger.warning("Unable to configure PyWhatKit settings - using defaults")
-    
-    logger.info("WhatsApp configuration set up successfully")
 
 def send_whatsapp_message(phone_number, message, group_id=None):
 
+    full_message = f"⚠️ IMPORTANT MESSAGE ⚠️\n\n{message}"
+
+    result = _send_with_browser(phone_number, full_message, group_id)
+    if result["status"] == "success":
+        return result
+    
+
+    logger.info("Browser method failed, trying fallback method...")
+    return _open_whatsapp_directly(phone_number, full_message, group_id)
+
+
+def _send_with_browser(phone_number, message, group_id=None):
+
+    global HAS_AUTHENTICATED
+    
     try:
-        # Configure Chrome options for headless mode
+        # Setup browser
         chrome_options = Options()
-        chrome_options.add_argument("--headless=new")  # Use new headless mode
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--window-size=1920,1080")
         
-        # Set user agent to avoid detection as a bot
-        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
-        chrome_options.add_argument(f'user-agent={user_agent}')
+        # Create profile directory if it doesn't exist
+        if not os.path.exists(PROFILE_DIR):
+            os.makedirs(PROFILE_DIR, exist_ok=True)
         
-        # Generate a unique profile directory for each session to avoid conflicts
-        import uuid
-        profile_dir = f"./whatsapp_profile_{uuid.uuid4().hex[:8]}"
-        chrome_options.add_argument(f"--user-data-dir={profile_dir}")
+        # Use persistent profile to maintain login session
+        chrome_options.add_argument(f"--user-data-dir={PROFILE_DIR}")
         
-        logger.info("Initializing Chrome driver in headless mode")
+        # Launch browser
         driver = webdriver.Chrome(options=chrome_options)
         
         try:
-            # Import wait utilities for more robust element detection
-            from selenium.webdriver.support.ui import WebDriverWait
-            from selenium.webdriver.support import expected_conditions as EC
-            from selenium.common.exceptions import TimeoutException, NoSuchElementException
+            # Start at WhatsApp Web home
+            driver.get("https://web.whatsapp.com/")
             
-            if group_id:
-                # Send message to a group using direct web URL
-                logger.info(f"Sending message to group {group_id} using headless browser")
-                web_url = f"https://web.whatsapp.com/accept?code={group_id}"
-                driver.get(web_url)
-                
-                logger.info("Waiting for WhatsApp Web to load")
-                # Use a single loaded condition for the chat page
-                try:
-                    WebDriverWait(driver, 60).until(
-                        EC.visibility_of_any_elements_located((By.CSS_SELECTOR, "[contenteditable='true']"))
-                    )
-                    logger.info("WhatsApp Web loaded successfully")
-                except TimeoutException:
-                    logger.error("Timed out waiting for WhatsApp Web to load")
-                    # If we can't find the input field, try directly sending the message via URL
-                    driver.get(f"https://web.whatsapp.com/accept?code={group_id}&text={message}")
-                    time.sleep(20)  # Give extra time for WhatsApp to load with the message
-                    # Try to press Enter
-                    driver.find_element(By.CSS_SELECTOR, "body").send_keys(Keys.ENTER)
-                    time.sleep(3)  # Wait for message to send
-                    return {"status": "success", "message": f"Message sent to group {group_id} via direct URL"}
-                
-                # Try multiple selector strategies to find the input field
-                text_box = None
-                selectors = [
-                    (By.CSS_SELECTOR, "[contenteditable='true']"),
-                    (By.CSS_SELECTOR, "div[role='textbox']"),
-                    (By.CSS_SELECTOR, "div[data-testid='conversation-compose-box-input']"),
-                    (By.CSS_SELECTOR, "footer div.selectable-text"),
-                    (By.XPATH, "//div[contains(@class, 'selectable-text')]")
-                ]
-                
-                for selector_type, selector in selectors:
-                    try:
-                        text_box = driver.find_element(selector_type, selector)
-                        logger.info(f"Found input field using {selector_type}: {selector}")
-                        break
-                    except NoSuchElementException:
-                        continue
-                
-                if text_box:
-                    # Send message using JavaScript to ensure it works in headless mode
-                    driver.execute_script(f"arguments[0].innerHTML = '{message}'", text_box)
-                    text_box.send_keys(Keys.ENTER)
-                    logger.info(f"Message entered and sent to group {group_id}")
-                    time.sleep(3)  # Wait for message to send
-                    return {"status": "success", "message": f"Message sent to group {group_id} using headless browser"}
-                else:
-                    raise Exception("Could not find message input field using any selector strategy")
-            else:
-                # Send message to an individual
-                logger.info(f"Sending message to {phone_number} using headless browser")
-                formatted_phone = phone_number.replace("+", "").replace(" ", "")
-                
-                # Include the message directly in the URL for easier sending
-                web_url = f"https://web.whatsapp.com/send?phone={formatted_phone}&text={message}"
-                driver.get(web_url)
-                
-                # Wait for the page to load
-                logger.info("Waiting for WhatsApp Web to load")
-                try:
-                    # Wait for either the message input field or the send button to appear
-                    WebDriverWait(driver, 60).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
-                    )
-                    logger.info("WhatsApp Web page loaded")
-                    
-                    # Try to press Enter to send the pre-filled message
-                    driver.find_element(By.CSS_SELECTOR, "body").send_keys(Keys.ENTER)
-                    logger.info("Enter key sent to body")
-                    time.sleep(3)  # Wait for message to send
-                    
-                    return {"status": "success", "message": f"Message sent to {phone_number} using headless browser"}
-                except TimeoutException:
-                    logger.error("Timed out waiting for WhatsApp Web to load")
-                    raise Exception("Timed out waiting for WhatsApp Web to load")
-        finally:
-            # Always close the driver
-            driver.quit()
+            # Show QR code scan instructions if first time
+            if not HAS_AUTHENTICATED:
+                print("\n" + "="*60)
+                print("PLEASE SCAN QR CODE IN BROWSER WINDOW")
+                print("You only need to do this once")
+                print("="*60 + "\n")
             
-            # Clean up the temporary profile directory
-            import shutil
+
             try:
-                shutil.rmtree(profile_dir, ignore_errors=True)
-                logger.info(f"Cleaned up temporary profile directory: {profile_dir}")
+                WebDriverWait(driver, WAIT_TIME).until(
+                    EC.presence_of_element_located((By.XPATH, "//div[@contenteditable='true'][@data-tab='3']"))
+                )
+                HAS_AUTHENTICATED = True
+                logger.info("Authentication successful")
+            except TimeoutException:
+                logger.warning("Authentication timed out - waiting for QR code scan")
+                # Wait longer in case user is scanning QR code
+                WebDriverWait(driver, 60).until(
+                    EC.presence_of_element_located((By.XPATH, "//div[@contenteditable='true'][@data-tab='3']"))
+                )
+                HAS_AUTHENTICATED = True
+            
+            # Navigate to specific chat
+            if group_id:
+                driver.get(f"https://web.whatsapp.com/accept?code={group_id}")
+            else:
+                formatted_phone = phone_number.replace("+", "").replace(" ", "")
+                driver.get(f"https://web.whatsapp.com/send?phone={formatted_phone}")
+            
+            # Wait for chat to load
+            logger.info("Waiting for chat to load...")
+            time.sleep(5)
+            
+            # Check for and click join button if present
+            try:
+                join_buttons = driver.find_elements(By.XPATH, "//div[contains(text(), 'Join') or contains(text(), 'join')]")
+                if join_buttons:
+                    logger.info("Found join button, clicking...")
+                    join_buttons[0].click()
+                    time.sleep(3)
             except Exception as e:
-                logger.warning(f"Failed to clean up profile directory: {str(e)}")
+                logger.info(f"No join button found or couldn't click: {e}")
+            
+            # Find text input box
+            input_box = WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.XPATH, "//div[@contenteditable='true'][@data-tab='10']"))
+            )
+            
+            # Input message
+            input_box.clear()
+            
+            # Send in chunks to avoid issues
+            for chunk in [message[i:i+20] for i in range(0, len(message), 20)]:
+                input_box.send_keys(chunk)
+                time.sleep(0.2)
+            
+            # Send message
+            time.sleep(1)
+            input_box.send_keys(Keys.ENTER)
+            
+            # Take screenshot for debugging
+            try:
+                screenshot_path = "whatsapp_debug.png"
+                driver.save_screenshot(screenshot_path)
+                logger.info(f"Saved screenshot to {screenshot_path}")
+            except Exception:
+                pass
+            
+            logger.info("Message sent successfully")
+            time.sleep(3)
+            return {"status": "success", "message": "Message sent successfully"}
+            
+        finally:
+            # Clean up
+            driver.quit()
     
     except Exception as e:
-        error_msg = f"Error sending WhatsApp message: {str(e)}"
-        logger.error(error_msg)
-        return {"status": "error", "message": error_msg}
+        logger.error(f"Error using browser method: {e}")
+        return {"status": "error", "message": str(e)}
 
-# Flask routes
+
+def _open_whatsapp_directly(phone_number, message, group_id=None):
+    """Simple method to open WhatsApp Web and guide user to send message manually"""
+    try:
+        # Configure pywhatkit
+        try:
+            pywhatkit.config.wait_time = 15
+            pywhatkit.config.close_tab = False
+        except AttributeError:
+            try:
+                pywhatkit.settings.wait_time = 15
+                pywhatkit.settings.close_tab = False
+            except AttributeError:
+                logger.warning("Could not configure pywhatkit")
+        
+        # Calculate time (1 minute from now)
+        now = datetime.datetime.now()
+        hour, minute = now.hour, (now.minute + 1) % 60
+        if now.minute == 59:
+            hour = (hour + 1) % 24
+        
+        # Show instructions
+        print("\n" + "="*60)
+        print("MANUAL ACTION REQUIRED:")
+        print("1. A browser will open to WhatsApp Web")
+        print("2. Scan QR code with your phone if prompted")
+        print("3. The message should be sent automatically")
+        print("4. If not, copy and paste this message:")
+        print("-"*40)
+        print(message)
+        print("-"*40)
+        print("="*60 + "\n")
+        
+        # Try pywhatkit's methods
+        if group_id:
+            # Open directly to group
+            webbrowser.open(f"https://web.whatsapp.com/accept?code={group_id}")
+            time.sleep(2)
+            
+            # Try pywhatkit as backup
+            try:
+                pywhatkit.sendwhatmsg_to_group(group_id, message, hour, minute, wait_time=15)
+                return {"status": "success", "message": "Message sent via pywhatkit"}
+            except Exception as e:
+                logger.warning(f"Pywhatkit group message failed: {e}")
+                return {"status": "partial", "message": "WhatsApp Web opened for manual sending"}
+        else:
+            # For individual messages
+            formatted_phone = phone_number.replace("+", "").replace(" ", "")
+            try:
+                pywhatkit.sendwhatmsg(formatted_phone, message, hour, minute, wait_time=15)
+                return {"status": "success", "message": "Message sent via pywhatkit"}
+            except Exception as e:
+                logger.warning(f"Pywhatkit message failed: {e}")
+                webbrowser.open(f"https://web.whatsapp.com/send?phone={formatted_phone}")
+                return {"status": "partial", "message": "WhatsApp Web opened for manual sending"}
+    
+    except Exception as e:
+        logger.error(f"Error opening WhatsApp Web: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+def send_flood_alert(hazard_index, group_id=None, phone_number=None, affected_regions=None, language='en'):
+
+    if not group_id and not phone_number:
+        logger.error("Either group_id or phone_number must be provided")
+        return {"status": "error", "message": "Either group_id or phone_number must be provided"}
+    
+    # Import translation function here to avoid circular imports
+    from flood_threat import format_alert_message
+
+    message = format_alert_message(hazard_index, affected_regions, language)
+
+    logger.info(f"Sending flood alert with hazard index {hazard_index:.2f} for regions: {affected_regions or 'Unknown'} in {language}")
+    
+    # Send the message
+    return send_whatsapp_message(phone_number, message, group_id)
+
+
 @app.route('/send_alert', methods=['POST'])
 def send_alert():
-
+    """API endpoint to send an alert message"""
     data = request.json
     
     if not data:
@@ -178,14 +245,10 @@ def send_alert():
     
     if not phone_number and not group_id:
         return jsonify({"status": "error", "message": "Either phone_number or group_id must be provided"}), 400
-    
-    # Optional hazard index for logging
+
     hazard_index = data.get('hazard_index')
     if hazard_index:
         logger.info(f"Sending alert for hazard index: {hazard_index}")
-    
-    # Configure settings
-    setup_whatsapp_config()
     
     # Send the message
     result = send_whatsapp_message(phone_number, message, group_id)
@@ -195,24 +258,12 @@ def send_alert():
     else:
         return jsonify(result), 500
 
-def send_flood_alert(hazard_index, group_id=None, phone_number=None):
-
-    if not group_id and not phone_number:
-        logger.error("Either group_id or phone_number must be provided")
-        return {"status": "error", "message": "Either group_id or phone_number must be provided"}
-    
-    message = f"FLOOD ALERT!\nImminent flood threat detected with hazard index of {hazard_index:.2f}.\nPlease take necessary precautions immediately."
-    
-    # Log the alert
-    logger.info(f"Sending flood alert with hazard index {hazard_index:.2f}")
-    
-    # Send the message using the headless implementation
-    return send_whatsapp_message(phone_number, message, group_id)
 
 if __name__ == "__main__":
     # For testing purposes
     print("Starting WhatsApp Messaging API")
-    # Uncomment to test sending a message:
-    # send_flood_alert(0.85, group_id="Your_Group_ID_Here")
-    # Or to run the Flask server:
-    app.run(debug=True, port=5000)
+    # Test direct message sending
+    result = send_flood_alert(0.85, group_id="FAXzTqYTt4zF2h6OuVeUck")
+    print(f"Result: {result}")
+    # Flask server:
+    # app.run(debug=True, port=5000)
