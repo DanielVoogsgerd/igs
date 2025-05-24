@@ -21,5 +21,6 @@ dependencies = [
     "requests>=2.32.3",
     "requests-cache>=1.2.1",
     "scipy>=1.15.2",
+    "tqdm>=4.67.1",
     "xarray>=2025.4.0",
 ]
