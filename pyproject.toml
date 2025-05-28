@@ -1,7 +1,7 @@
 [project]
 name = "igs"
 version = "0.1.0"
-description = "Add your description here"
+description = "FEWS for Indonesia, Bandung Regency"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -23,4 +23,10 @@ dependencies = [
     "scipy>=1.15.2",
     "tqdm>=4.67.1",
     "xarray>=2025.4.0",
+    "flask>=3.1.1",
+    "numpy>=1.26.4",
+    "pyautogui>=0.9.54",
+    "pywhatkit>=5.4",
+    "selenium>=4.33.0",
+    "uuid>=1.30",
 ]

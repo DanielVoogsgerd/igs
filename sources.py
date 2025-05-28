@@ -1,4 +1,4 @@
-#!/usr/env/pythore
+#!/usr/env/python
 from datetime import timedelta, date
 from io import BytesIO
 import logging
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 PLATE_CARREE_EPSG = 32662
 
 SESSION = requests_cache.CachedSession(
-    "demo_cache",
+    "fews",
     use_cache_dir=True,  # Save files in the default user cache dir
     cache_control=False,  # Use Cache-Control response headers for expiration, if available
     expire_after=timedelta(days=700),  # Otherwise expire responses after one day

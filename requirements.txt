@@ -1,18 +1,24 @@
+PyQt6
 basemap
 beautifulsoup4
 cartopy
+flask
 gdal < 3.10.0
 geopandas
 matplotlib
 netcdf4
+numpy
 osmnx
 pandas
 pillow
+pyautogui
 pyproj
-PyQt6
+pywhatkit
 rasterio
 requests
 requests-cache
 scipy
+selenium
 tqdm
+uuid
 xarray
