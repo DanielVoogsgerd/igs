@@ -1,5 +1,5 @@
 #!/usr/env/python
-from datetime import timedelta
+from datetime import timedelta, datetime
 import logging
 
 import cartopy.crs as ccrs
@@ -64,7 +64,9 @@ def main(
 
     logger.info("Setting up registry")
     registry = Registry()
-    registry.register_source(NOAAGfsSource("20250513", "00", 12, "apcpsfc"))
+    # Configure date for noaagfs source here. Must be recent.
+    noaagfs_date = (datetime.now() - timedelta(days=2)).strftime("%Y%m%d")
+    registry.register_source(NOAAGfsSource(noaagfs_date, "00", 12, "apcpsfc"))
     registry.register_source(BnpbInaRiskFloodRiskIndexSource())
     registry.register_source(BnpbInaRiskFlashFloodRiskIndexSource())
 
