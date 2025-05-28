@@ -42,8 +42,6 @@ def main(
     use_whatsapp_fallback_only=False,
     language="en",
 ):
-    set_up_logging()
-
     gdal.UseExceptions()
 
     # angular_resolution = 0.01  # pretty, but slow
@@ -101,44 +99,6 @@ def main(
     plt.show()
 
 
-def set_up_logging():
-    logging.basicConfig(
-        level=logging.getLevelName(get_args().logLevel),
-        format="%(levelname)8s: %(message)s",
-    )
-    logging.getLogger("matplotlib").setLevel(logging.WARNING)
-    logging.getLogger("requests_cache").setLevel(logging.WARNING)
-
-
-def get_args():
-    global args
-    if args is None:
-        # Create a parser with the log level argument
-        parser = argparse.ArgumentParser(
-            add_help=False
-        )  # Don't add help to avoid conflict with main parser
-        parser.add_argument(
-            "-l",
-            "--log",
-            dest="logLevel",
-            choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-            default="INFO",
-            help="Set the logging level",
-        )
-
-        # Parse just the logging arguments
-        log_args, _ = parser.parse_known_args()
-
-        # If args is already set (from the main parser), add the logLevel attribute
-        if args is not None and not hasattr(args, "logLevel"):
-            args.logLevel = log_args.logLevel
-        else:
-            # Otherwise, use the parsed log arguments
-            args = log_args
-
-    return args
-
-
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(
@@ -169,6 +129,14 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    # Set up logging
+    logging.basicConfig(
+        level=logging.getLevelName(args.logLevel),
+        format="%(levelname)8s: %(message)s",
+    )
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("requests_cache").setLevel(logging.WARNING)
 
     # Run main function with parsed arguments
     main(
