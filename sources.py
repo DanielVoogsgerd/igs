@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 PLATE_CARREE_EPSG = 32662
 
 SESSION = requests_cache.CachedSession(
-    "demo_cache",
+    "fews",
     use_cache_dir=True,  # Save files in the default user cache dir
     cache_control=False,  # Use Cache-Control response headers for expiration, if available
     expire_after=timedelta(days=700),  # Otherwise expire responses after one day
@@ -86,8 +86,6 @@ class BnpbSource(Source):
             logger.error(f"{self.IDENTIFIER}: fetching failed")
             logger.error(res.text)
             return None
-
-        print("Received response from bnpb")
 
         i = Image.open(BytesIO(res.content))
 
@@ -182,7 +180,6 @@ class NOAAGfsSource(Source):
     IDENTIFIER = "noaa-gfs-rain-data"
 
     DATA_RESOLUTION = 0.25
-    IDENTIFIER = "noaa-gfs"
 
     def __init__(self, date, cycle, hours_ahead, dataset):
         self.crs = ccrs.PlateCarree()
@@ -436,11 +433,6 @@ class CHIRPSSource(Source):
             logger.debug(f"{self.IDENTIFIER}: cache hit for {req.url}")
         else:
             logger.debug(f"{self.IDENTIFIER}: cache miss for {req.url}")
-
-        if res.from_cache:
-            print(f"Cache hit for {req.url}")
-        else:
-            print(f"Cache miss for {req.url}")
 
         decompressed = gzip.open(BytesIO(res.content))
 

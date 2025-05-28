@@ -13,7 +13,6 @@ from interface import *
 from sources import *
 from indices import *
 from notifiers import *
-from notifiers import AlertNotifier
 
 import argparse
 
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 args = None
 
 SESSION = requests_cache.CachedSession(
-    "demo_cache",
+    "fews",
     use_cache_dir=True,  # Save files in the default user cache dir
     cache_control=False,  # Use Cache-Control response headers for expiration, if available
     expire_after=timedelta(days=7),  # Otherwise expire responses after one day
@@ -37,7 +36,12 @@ PLATE_CARREE_EPSG = 32662
 MAP_PROJECTION = ccrs.PlateCarree()
 
 
-def main(use_whatsapp=True, use_telegram=True, use_whatsapp_fallback_only=False, language='en'):
+def main(
+    use_whatsapp=True,
+    use_telegram=True,
+    use_whatsapp_fallback_only=False,
+    language="en",
+):
     set_up_logging()
 
     gdal.UseExceptions()
@@ -69,22 +73,26 @@ def main(use_whatsapp=True, use_telegram=True, use_whatsapp_fallback_only=False,
     registry.register_notifier(PlotNotifier())
     registry.register_notifier(ConsoleAreaNotifier())
     registry.register_notifier(ConsoleGridNotifier())
-    
+
     # Configure messaging settings - update with your actual values as needed
-    whatsapp_group_id = '<insert group id>'  # Replace with your WhatsApp group ID
-    whatsapp_phone_number = '<insert phone number>'  # Replace with your WhatsApp phone number
-    telegram_chat_id = '@fewsbandungML'  # Replace with your Telegram channel
-    
+    whatsapp_group_id = "<insert group id>"  # Replace with your WhatsApp group ID
+    whatsapp_phone_number = (
+        "<insert phone number>"  # Replace with your WhatsApp phone number
+    )
+    telegram_chat_id = "@fewsbandungML"  # Replace with your Telegram channel
+
     # Register the alert notifier with messaging configuration
-    registry.register_notifier(AlertNotifier(
-        whatsapp_group_id=whatsapp_group_id,
-        whatsapp_phone_number=whatsapp_phone_number,
-        telegram_chat_id=telegram_chat_id,
-        use_whatsapp=use_whatsapp,
-        use_telegram=use_telegram,
-        use_whatsapp_fallback_only=use_whatsapp_fallback_only,
-        language=language
-    ))
+    registry.register_notifier(
+        AlertNotifier(
+            whatsapp_group_id=whatsapp_group_id,
+            whatsapp_phone_number=whatsapp_phone_number,
+            telegram_chat_id=telegram_chat_id,
+            use_whatsapp=use_whatsapp,
+            use_telegram=use_telegram,
+            use_whatsapp_fallback_only=use_whatsapp_fallback_only,
+            language=language,
+        )
+    )
 
     registry.run(extent, resolution)
 
@@ -104,20 +112,23 @@ def get_args():
     global args
     if args is None:
         # Create a parser with the log level argument
-        parser = argparse.ArgumentParser(add_help=False)  # Don't add help to avoid conflict with main parser
+        parser = argparse.ArgumentParser(
+            add_help=False
+        )  # Don't add help to avoid conflict with main parser
         parser.add_argument(
+            "-l",
             "--log",
             dest="logLevel",
             choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
             default="INFO",
             help="Set the logging level",
         )
-        
+
         # Parse just the logging arguments
         log_args, _ = parser.parse_known_args()
-        
+
         # If args is already set (from the main parser), add the logLevel attribute
-        if args is not None and not hasattr(args, 'logLevel'):
+        if args is not None and not hasattr(args, "logLevel"):
             args.logLevel = log_args.logLevel
         else:
             # Otherwise, use the parsed log arguments
@@ -128,29 +139,39 @@ def get_args():
 
 if __name__ == "__main__":
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Indonesian Flood Early Warning System')
-    parser.add_argument('--no-whatsapp', action='store_true', help='Disable WhatsApp notifications')
-    parser.add_argument('--no-telegram', action='store_true', help='Disable Telegram notifications')
-    parser.add_argument('--fallback-only', action='store_true', help='Use only WhatsApp fallback method')
-    parser.add_argument('--language', choices=['en', 'id'], default='en', 
-                      help='Message language (en=English, id=Indonesian)')
-    parser.add_argument('--log', dest="logLevel", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                      default="INFO", help="Set the logging level")
-    
-    # Print usage information at startup
-    print("\n" + "="*80)
-    print("Indonesian Flood Early Warning System")
-    print("="*80)
-    print("Run with --help for available options")
-    print("Example: python main.py --language id --fallback-only")
-    print("="*80 + "\n")
-    
+    parser = argparse.ArgumentParser(
+        description="Indonesian Flood Early Warning System"
+    )
+    parser.add_argument(
+        "--no-whatsapp", action="store_true", help="Disable WhatsApp notifications"
+    )
+    parser.add_argument(
+        "--no-telegram", action="store_true", help="Disable Telegram notifications"
+    )
+    parser.add_argument(
+        "--fallback-only", action="store_true", help="Use only WhatsApp fallback method"
+    )
+    parser.add_argument(
+        "--language",
+        choices=["en", "id"],
+        default="en",
+        help="Message language (en=English, id=Indonesian)",
+    )
+    parser.add_argument(
+        "-l",
+        "--log",
+        dest="logLevel",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Set the logging level",
+    )
+
     args = parser.parse_args()
-    
+
     # Run main function with parsed arguments
     main(
         use_whatsapp=not args.no_whatsapp,
-        use_telegram=not args.no_telegram, 
+        use_telegram=not args.no_telegram,
         use_whatsapp_fallback_only=args.fallback_only,
-        language=args.language
+        language=args.language,
     )
